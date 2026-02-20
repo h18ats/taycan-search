@@ -1,0 +1,11 @@
+node_modules/
+porsche.db
+porsche.db-wal
+porsche.db-shm
+cookies.json
+storage-state.json
+debug-screenshot.png
+error-screenshot.png
+headed-screenshot.png
+api-response-*.json
+.DS_Store
