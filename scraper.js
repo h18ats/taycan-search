@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import Database from 'better-sqlite3';
+import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -19,16 +20,23 @@ export function initDb() {
     CREATE TABLE IF NOT EXISTS listings (
       id TEXT PRIMARY KEY,
       title TEXT,
+      condition TEXT,
       price INTEGER,
       price_text TEXT,
-      year INTEGER,
+      exterior_color TEXT,
+      interior_color TEXT,
+      fuel_type TEXT,
       mileage TEXT,
-      mileage_km INTEGER,
-      location TEXT,
-      color TEXT,
+      mileage_miles INTEGER,
+      registration_date TEXT,
+      previous_owners TEXT,
+      power TEXT,
+      drivetrain TEXT,
+      range_wltp TEXT,
       image_url TEXT,
       detail_url TEXT,
-      specs TEXT,
+      dealer TEXT,
+      consumption TEXT,
       first_seen TEXT DEFAULT (datetime('now')),
       last_seen TEXT DEFAULT (datetime('now')),
       removed INTEGER DEFAULT 0
@@ -38,6 +46,7 @@ export function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       listing_id TEXT,
       price INTEGER,
+      price_text TEXT,
       recorded_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (listing_id) REFERENCES listings(id)
     );
@@ -48,7 +57,8 @@ export function initDb() {
       listings_found INTEGER,
       new_listings INTEGER,
       price_changes INTEGER,
-      removed_listings INTEGER
+      removed_listings INTEGER,
+      status TEXT DEFAULT 'success'
     );
   `);
 
@@ -56,173 +66,346 @@ export function initDb() {
 }
 
 export async function scrape({ headed = false } = {}) {
-  console.log('🚗 Starting Porsche Finder scrape...');
-  console.log(`📅 ${new Date().toISOString()}`);
+  const startTime = Date.now();
+  console.log(`🚗 Starting Porsche Finder scrape... [${new Date().toISOString()}]`);
+
+  const storageStatePath = join(__dirname, 'storage-state.json');
+  const hasStorageState = existsSync(storageStatePath);
+
+  if (!hasStorageState && !headed) {
+    console.log('⚠️  No saved session found. Run with --headed first to bypass security.');
+    console.log('   Usage: node scraper.js --headed');
+    process.exit(1);
+  }
 
   const browser = await chromium.launch({
     headless: !headed,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled']
   });
 
-  const context = await browser.newContext({
+  const contextOptions = {
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     viewport: { width: 1920, height: 1080 },
     locale: 'en-GB',
     timezoneId: 'Europe/London'
-  });
+  };
 
+  if (hasStorageState) {
+    contextOptions.storageState = storageStatePath;
+    console.log('🍪 Using saved session');
+  }
+
+  const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
 
-  // Remove webdriver flag
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
-    // Override permissions
-    const originalQuery = window.navigator.permissions.query;
-    window.navigator.permissions.query = (parameters) =>
-      parameters.name === 'notifications'
-        ? Promise.resolve({ state: Notification.permission })
-        : originalQuery(parameters);
   });
 
   try {
     console.log('📡 Loading Porsche Finder...');
     await page.goto(SEARCH_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-    // Wait for potential challenge to resolve
     await page.waitForTimeout(5000);
 
-    // Check if we're still on security checkpoint
+    // Check for security checkpoint
     const title = await page.title();
-    if (title.includes('Security Checkpoint') || title.includes('Vercel')) {
-      console.log('⚠️  Vercel security checkpoint detected, waiting for resolution...');
-      // Wait longer for the challenge to auto-resolve
-      await page.waitForTimeout(10000);
-
-      const newTitle = await page.title();
-      if (newTitle.includes('Security') || newTitle.includes('Vercel')) {
-        console.log('❌ Still blocked by security. Trying page reload...');
-        await page.reload({ waitUntil: 'domcontentloaded' });
-        await page.waitForTimeout(8000);
+    if (title.includes('Security') || title.includes('Vercel')) {
+      if (headed) {
+        console.log('⚠️  Security checkpoint detected. Solve it in the browser window...');
+        // Wait for user to solve challenge
+        await page.waitForFunction(() => !document.title.includes('Security') && !document.title.includes('Vercel'), { timeout: 120000 });
+        console.log('✅ Security challenge passed!');
+        await page.waitForTimeout(3000);
+        // Save updated session
+        await context.storageState({ path: storageStatePath });
+        console.log('💾 Session saved for future use');
+      } else {
+        console.log('❌ Blocked by security. Session may have expired.');
+        console.log('   Run with --headed to refresh: node scraper.js --headed');
+        await browser.close();
+        return { listings: [], error: 'security_blocked' };
       }
     }
 
-    // Try to accept cookie consent
+    // Accept cookies if needed
     try {
-      const cookieSelectors = [
-        'button:has-text("Accept All")',
-        'button:has-text("Accept")',
-        'button:has-text("Allow All")',
-        '[data-testid="cookie-accept"]',
-        '#onetrust-accept-btn-handler',
-        '.cookie-accept',
-        'button[id*="accept"]'
-      ];
-      for (const sel of cookieSelectors) {
+      for (const sel of ['button:has-text("Accept All")', '#onetrust-accept-btn-handler', 'button:has-text("Allow All")']) {
         const btn = page.locator(sel);
         if (await btn.isVisible({ timeout: 1000 }).catch(() => false)) {
           await btn.first().click();
-          console.log('🍪 Accepted cookies');
           await page.waitForTimeout(1000);
           break;
         }
       }
-    } catch (e) {
-      // No cookie banner
-    }
+    } catch (e) {}
 
-    // Wait for listings
-    console.log('⏳ Waiting for listings to load...');
-    await page.waitForTimeout(3000);
+    console.log('⏳ Extracting listings...');
+    await page.waitForTimeout(2000);
 
-    // Take debug screenshot
-    await page.screenshot({ path: join(__dirname, 'debug-screenshot.png'), fullPage: false });
+    // Extract all listing data from the page using structured DOM parsing
+    const listings = await page.evaluate(() => {
+      const results = [];
 
-    // Log page state
-    const pageTitle = await page.title();
-    const pageUrl = page.url();
-    console.log('Page title:', pageTitle);
-    console.log('Page URL:', pageUrl);
+      // Find all detail page links (each listing links to /details/)
+      const detailLinks = document.querySelectorAll('a[href*="/details/"]');
+      const processedSlugs = new Set();
 
-    // Discover page structure
-    const discovery = await page.evaluate(() => {
-      const allElements = document.querySelectorAll('*');
-      const classes = new Set();
-      const tags = {};
+      for (const link of detailLinks) {
+        const href = link.getAttribute('href');
+        if (!href) continue;
 
-      for (const el of allElements) {
-        const tag = el.tagName.toLowerCase();
-        tags[tag] = (tags[tag] || 0) + 1;
-        for (const cls of el.classList) {
-          const lower = cls.toLowerCase();
-          if (lower.includes('vehicle') || lower.includes('car') || lower.includes('listing') ||
-              lower.includes('card') || lower.includes('result') || lower.includes('search') ||
-              lower.includes('price') || lower.includes('tile') || lower.includes('item') ||
-              lower.includes('product') || lower.includes('offer')) {
-            classes.add(cls);
+        // Extract the clean listing slug (e.g. "porsche-taycan-turbo-s-preowned-5K9PGV")
+        const detailPath = href.split('/details/')[1];
+        if (!detailPath) continue;
+        const slug = detailPath.split('?')[0];
+        if (processedSlugs.has(slug)) continue;
+        processedSlugs.add(slug);
+
+        // Walk up to find the card container
+        let card = link;
+        for (let i = 0; i < 15; i++) {
+          if (!card.parentElement) break;
+          card = card.parentElement;
+          if (card.textContent.includes('£') && card.textContent.length > 200 && card.textContent.length < 8000) {
+            break;
           }
         }
+
+        const text = card.innerText || card.textContent;
+        if (!text.includes('£')) continue;
+
+        // Split text into lines for more precise extraction
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+        // Price: find £XX,XXX pattern
+        const priceMatch = text.match(/£([\d,]+)/);
+
+        // Mileage: match "XX,XXX mi" but NOT after "Range" or "WLTP"
+        // The actual mileage appears as a standalone value like "40,419 mi"
+        // while range appears as "Range combined (WLTP): 259 mi"
+        let mileage = null;
+        let mileageMiles = null;
+        for (const line of lines) {
+          const m = line.match(/^([\d,]+)\s*mi$/);
+          if (m) {
+            mileage = line;
+            mileageMiles = parseInt(m[1].replace(/,/g, ''));
+            break;
+          }
+        }
+
+        // Registration date: MM/YYYY
+        const dateMatch = text.match(/(\d{2}\/\d{4})/);
+
+        // Previous owners: "X previous owner(s)" - must be on its own or preceded by whitespace/newline
+        let previousOwners = null;
+        for (const line of lines) {
+          const m = line.match(/^(\d+)\s*previous\s*owner/i);
+          if (m) {
+            previousOwners = line;
+            break;
+          }
+        }
+
+        // Power
+        const powerMatch = text.match(/(\d+\s*kW\s*\/\s*\d+\s*hp)/);
+
+        // Range (WLTP) - explicitly after "Range"
+        const rangeMatch = text.match(/Range[^:]*:\s*([\d,]+\s*mi)/i);
+
+        // Consumption
+        const consumptionMatch = text.match(/consumption[^:]*:\s*([\d.]+\s*kWh\/100\s*km)/i);
+
+        // Images: look for actual car photos (not icons/logos)
+        let imageUrl = null;
+        const allImgs = card.querySelectorAll('img');
+        for (const img of allImgs) {
+          const src = img.src || img.dataset.src || img.getAttribute('srcset')?.split(' ')[0] || '';
+          if (src && src.length > 50 && !src.includes('logo') && !src.includes('icon') && !src.includes('svg')) {
+            imageUrl = src;
+            break;
+          }
+        }
+        // Also check for background images on child elements
+        if (!imageUrl) {
+          const bgEls = card.querySelectorAll('[style*="background"]');
+          for (const el of bgEls) {
+            const bg = el.style.backgroundImage;
+            const urlMatch = bg.match(/url\(["']?([^"')]+)["']?\)/);
+            if (urlMatch && urlMatch[1].length > 50) {
+              imageUrl = urlMatch[1];
+              break;
+            }
+          }
+        }
+        // Check picture/source elements
+        if (!imageUrl) {
+          const sources = card.querySelectorAll('source[srcset], picture source');
+          for (const source of sources) {
+            const srcset = source.getAttribute('srcset');
+            if (srcset && srcset.length > 50) {
+              imageUrl = srcset.split(' ')[0].split(',')[0].trim();
+              break;
+            }
+          }
+        }
+
+        // Colors: look for color-related lines
+        const colorPatterns = [
+          'Jet Black Metallic', 'Volcano Grey Metallic', 'Carrara White Metallic',
+          'Gentian Blue Metallic', 'Cherry Metallic', 'Frozen Blue Metallic',
+          'Mahogany Metallic', 'Dolomite Silver Metallic', 'Mamba Green Metallic',
+          'Neptune Blue Metallic', 'Night Blue Metallic', 'Taycan Blue Metallic',
+          'Ice Grey Metallic', 'Chalk', 'White', 'Black'
+        ];
+        const interiorColorPatterns = ['Black', 'Beige', 'Red', 'Bordeaux Red', 'Chalk',
+          'Truffle Brown', 'Atacama Beige', 'Slate Grey', 'Graphite Blue', 'Basalt Black'];
+
+        let exteriorColor = null;
+        let interiorColor = null;
+        for (const c of colorPatterns) {
+          if (text.includes(c)) { exteriorColor = c; break; }
+        }
+        // Interior color: find the first matching color that appears after the exterior color
+        if (exteriorColor) {
+          const afterExterior = text.substring(text.indexOf(exteriorColor) + exteriorColor.length);
+          for (const c of interiorColorPatterns) {
+            // Check if this color appears as a standalone word/line
+            for (const line of lines) {
+              if (line === c || line.startsWith(c)) {
+                const idx = text.indexOf(line);
+                if (idx > text.indexOf(exteriorColor)) {
+                  interiorColor = c;
+                  break;
+                }
+              }
+            }
+            if (interiorColor) break;
+          }
+        }
+
+        // Condition
+        const condition = text.includes('Pre-Owned') ? 'Porsche Approved Pre-Owned' :
+                         text.includes('New car') ? 'New' : 'Used';
+
+        // Dealer
+        const dealerMatch = text.match(/Porsche Centre\s+([\w\s]+?)(?:\n|Electrical|$)/i);
+
+        // Clean detail URL (remove query params for the ID)
+        const cleanDetailUrl = `https://finder.porsche.com/gb/en-GB/details/${slug}`;
+
+        results.push({
+          id: slug,
+          title: 'Porsche Taycan Turbo S',
+          condition,
+          price: priceMatch ? parseInt(priceMatch[1].replace(/,/g, '')) : null,
+          priceText: priceMatch ? `£${priceMatch[1]}` : null,
+          exteriorColor,
+          interiorColor,
+          fuelType: 'Electric',
+          mileage,
+          mileageMiles,
+          registrationDate: dateMatch ? dateMatch[1] : null,
+          previousOwners,
+          power: powerMatch ? powerMatch[1] : null,
+          drivetrain: text.includes('All-wheel') ? 'All-wheel-drive' : null,
+          rangeWltp: rangeMatch ? rangeMatch[1] : null,
+          imageUrl,
+          detailUrl: cleanDetailUrl,
+          dealer: dealerMatch ? `Porsche Centre ${dealerMatch[1].trim()}` : null,
+          consumption: consumptionMatch ? consumptionMatch[1] : null
+        });
       }
 
-      // Check for links that might be car detail pages
-      const carLinks = [];
-      document.querySelectorAll('a[href]').forEach(a => {
-        const href = a.getAttribute('href');
-        if (href && (href.includes('vehicle') || href.includes('taycan') || href.includes('detail') || href.includes('/car/'))) {
-          carLinks.push({ href, text: a.textContent.trim().substring(0, 100) });
-        }
-      });
-
-      // Check for images that might be car photos
-      const carImages = [];
-      document.querySelectorAll('img[src]').forEach(img => {
-        const src = img.src;
-        if (src && (src.includes('porsche') || src.includes('vehicle') || src.includes('car'))) {
-          carImages.push(src.substring(0, 200));
-        }
-      });
-
-      return {
-        title: document.title,
-        classes: [...classes],
-        carLinks: carLinks.slice(0, 20),
-        carImages: carImages.slice(0, 10),
-        bodyText: document.body.innerText.substring(0, 3000),
-        articleCount: document.querySelectorAll('article').length,
-        linkCount: document.querySelectorAll('a').length,
-        imgCount: document.querySelectorAll('img').length
-      };
+      return results;
     });
 
-    console.log('\n📋 Discovery results:');
-    console.log('Title:', discovery.title);
-    console.log('Relevant classes:', discovery.classes);
-    console.log('Car links:', discovery.carLinks.length);
-    if (discovery.carLinks.length > 0) {
-      console.log('Sample links:', JSON.stringify(discovery.carLinks.slice(0, 5), null, 2));
-    }
-    console.log('Car images:', discovery.carImages.length);
-    console.log('Articles:', discovery.articleCount);
-    console.log('All links:', discovery.linkCount);
-    console.log('All images:', discovery.imgCount);
-    console.log('\nBody text (first 1500 chars):\n', discovery.bodyText.substring(0, 1500));
+    console.log(`🚗 Found ${listings.length} listings`);
+    listings.forEach((l, i) => {
+      console.log(`  ${i + 1}. ${l.exteriorColor || 'Unknown'} - ${l.priceText} - ${l.mileage} - ${l.dealer}`);
+    });
 
+    // Save to database
+    const db = initDb();
+    let newCount = 0;
+    let priceChangeCount = 0;
+
+    const insertListing = db.prepare(`
+      INSERT INTO listings (id, title, condition, price, price_text, exterior_color, interior_color,
+        fuel_type, mileage, mileage_miles, registration_date, previous_owners, power, drivetrain,
+        range_wltp, image_url, detail_url, dealer, consumption)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        price = excluded.price,
+        price_text = excluded.price_text,
+        mileage = excluded.mileage,
+        mileage_miles = excluded.mileage_miles,
+        last_seen = datetime('now'),
+        removed = 0
+    `);
+
+    const getExisting = db.prepare('SELECT id, price FROM listings WHERE id = ?');
+    const insertPrice = db.prepare('INSERT INTO price_history (listing_id, price, price_text) VALUES (?, ?, ?)');
+
+    const transaction = db.transaction((items) => {
+      for (const l of items) {
+        const existing = getExisting.get(l.id);
+        if (!existing) {
+          newCount++;
+        } else if (existing.price !== l.price) {
+          priceChangeCount++;
+        }
+
+        insertListing.run(l.id, l.title, l.condition, l.price, l.priceText,
+          l.exteriorColor, l.interiorColor, l.fuelType, l.mileage, l.mileageMiles,
+          l.registrationDate, l.previousOwners, l.power, l.drivetrain, l.rangeWltp,
+          l.imageUrl, l.detailUrl, l.dealer, l.consumption);
+
+        insertPrice.run(l.id, l.price, l.priceText);
+      }
+    });
+
+    transaction(listings);
+
+    // Mark removed listings (were active but not in current scrape)
+    const currentIds = listings.map(l => `'${l.id}'`).join(',');
+    const removedCount = currentIds
+      ? db.prepare(`UPDATE listings SET removed = 1 WHERE removed = 0 AND id NOT IN (${currentIds})`).run().changes
+      : 0;
+
+    // Log scrape
+    db.prepare('INSERT INTO scrape_log (listings_found, new_listings, price_changes, removed_listings) VALUES (?, ?, ?, ?)')
+      .run(listings.length, newCount, priceChangeCount, removedCount);
+
+    console.log(`\n📊 Summary: ${newCount} new, ${priceChangeCount} price changes, ${removedCount} removed`);
+
+    // Save session for next time
+    await context.storageState({ path: join(__dirname, 'storage-state.json') });
+
+    db.close();
     await browser.close();
-    return discovery;
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`✅ Scrape complete in ${elapsed}s`);
+
+    return { listings, newCount, priceChangeCount, removedCount };
 
   } catch (error) {
     console.error('❌ Scrape error:', error.message);
-    await page.screenshot({ path: join(__dirname, 'error-screenshot.png'), fullPage: false }).catch(() => {});
+    await page.screenshot({ path: join(__dirname, 'error-screenshot.png') }).catch(() => {});
     await browser.close();
     throw error;
   }
 }
 
-// Run if called directly
+// CLI entry point
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isMain) {
   const headed = process.argv.includes('--headed');
   scrape({ headed }).then(result => {
-    console.log('\n✅ Scrape complete!');
+    if (result.error) {
+      process.exit(1);
+    }
   }).catch(err => {
     console.error('Failed:', err.message);
     process.exit(1);

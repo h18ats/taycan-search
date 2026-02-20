@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taycan Turbo S Finder</title>
+  <style>
+    :root {
+      --porsche-red: #D5001C;
+      --porsche-dark: #0A0A0A;
+      --porsche-grey: #1A1A1A;
+      --porsche-mid-grey: #2A2A2A;
+      --porsche-light-grey: #4A4A4A;
+      --porsche-text: #E8E8E8;
+      --porsche-text-muted: #999;
+      --porsche-gold: #C4A862;
+      --porsche-green: #00B451;
+      --porsche-blue: #0084D6;
+      --card-bg: #161616;
+      --card-border: #2A2A2A;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Porsche Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--porsche-dark);
+      color: var(--porsche-text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(180deg, #111 0%, var(--porsche-dark) 100%);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1.5rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand svg {
+      width: 32px;
+      height: 32px;
+      fill: var(--porsche-text);
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .brand h1 span {
+      color: var(--porsche-red);
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--porsche-text-muted);
+    }
+
+    .last-updated {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      background: var(--porsche-green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .btn {
+      background: var(--porsche-mid-grey);
+      color: var(--porsche-text);
+      border: 1px solid var(--porsche-light-grey);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--porsche-light-grey);
+    }
+
+    .btn-primary {
+      background: var(--porsche-red);
+      border-color: var(--porsche-red);
+    }
+
+    .btn-primary:hover {
+      background: #B00018;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Stats Bar */
+    .stats-bar {
+      max-width: 1400px;
+      margin: 1.5rem auto;
+      padding: 0 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--porsche-text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .stat-value.price { color: var(--porsche-gold); }
+    .stat-value.green { color: var(--porsche-green); }
+    .stat-value.red { color: var(--porsche-red); }
+
+    /* Search criteria banner */
+    .criteria-banner {
+      max-width: 1400px;
+      margin: 0 auto 1.5rem;
+      padding: 0 2rem;
+    }
+
+    .criteria-inner {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .criteria-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--porsche-text-muted);
+      margin-right: 0.5rem;
+    }
+
+    .criteria-tag {
+      background: var(--porsche-mid-grey);
+      border: 1px solid var(--porsche-light-grey);
+      border-radius: 4px;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.8rem;
+      color: var(--porsche-text);
+    }
+
+    .criteria-tag.highlight {
+      border-color: var(--porsche-red);
+      color: var(--porsche-red);
+    }
+
+    .porsche-link {
+      margin-left: auto;
+      color: var(--porsche-blue);
+      text-decoration: none;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .porsche-link:hover { text-decoration: underline; }
+
+    /* Tabs */
+    .tabs {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 2rem 1rem;
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .tab {
+      padding: 0.6rem 1.5rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--porsche-text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: var(--porsche-text); }
+
+    .tab.active {
+      color: var(--porsche-text);
+      border-bottom-color: var(--porsche-red);
+    }
+
+    .tab .badge {
+      background: var(--porsche-mid-grey);
+      border-radius: 10px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.75rem;
+      margin-left: 0.4rem;
+    }
+
+    .tab.active .badge {
+      background: var(--porsche-red);
+    }
+
+    /* Listings Grid */
+    .listings-container {
+      max-width: 1400px;
+      margin: 1.5rem auto;
+      padding: 0 2rem;
+    }
+
+    .listings-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    .listing-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 380px 1fr auto;
+      transition: border-color 0.3s, transform 0.2s;
+    }
+
+    .listing-card:hover {
+      border-color: var(--porsche-light-grey);
+      transform: translateY(-1px);
+    }
+
+    .listing-card.new-listing {
+      border-color: var(--porsche-green);
+      box-shadow: 0 0 20px rgba(0, 180, 81, 0.1);
+    }
+
+    .listing-card.removed-listing {
+      opacity: 0.6;
+      border-color: var(--porsche-red);
+    }
+
+    .card-image {
+      position: relative;
+      height: 240px;
+      overflow: hidden;
+      background: var(--porsche-grey);
+    }
+
+    .card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .card-image .badge-overlay {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .badge-pill {
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-new {
+      background: var(--porsche-green);
+      color: #fff;
+    }
+
+    .badge-preowned {
+      background: rgba(0,0,0,0.7);
+      color: var(--porsche-gold);
+      backdrop-filter: blur(8px);
+    }
+
+    .badge-price-drop {
+      background: var(--porsche-green);
+      color: #fff;
+    }
+
+    .badge-removed {
+      background: var(--porsche-red);
+      color: #fff;
+    }
+
+    .card-details {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .card-colors {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .color-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 0.3rem;
+      vertical-align: middle;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .card-specs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.4rem 1.5rem;
+      font-size: 0.85rem;
+      color: var(--porsche-text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .card-specs .spec-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .spec-icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.6;
+    }
+
+    .card-dealer {
+      margin-top: auto;
+      font-size: 0.8rem;
+      color: var(--porsche-text-muted);
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .card-price-section {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: space-between;
+      min-width: 200px;
+      border-left: 1px solid var(--card-border);
+    }
+
+    .card-price {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--porsche-gold);
+    }
+
+    .card-price-note {
+      font-size: 0.75rem;
+      color: var(--porsche-text-muted);
+    }
+
+    .card-price-history {
+      font-size: 0.8rem;
+      color: var(--porsche-green);
+      margin-top: 0.25rem;
+    }
+
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: auto;
+    }
+
+    .btn-view {
+      background: var(--porsche-red);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-view:hover { background: #B00018; }
+
+    .days-listed {
+      font-size: 0.75rem;
+      color: var(--porsche-text-muted);
+      text-align: right;
+    }
+
+    /* Scrape Log */
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .log-table th {
+      text-align: left;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--porsche-text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .log-table td {
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--porsche-text-muted);
+    }
+
+    .empty-state h3 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      color: var(--porsche-text);
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--porsche-text-muted);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--porsche-light-grey);
+      border-top-color: var(--porsche-red);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--porsche-green);
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: none;
+      z-index: 200;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .toast.show {
+      display: block;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .listing-card {
+        grid-template-columns: 1fr;
+      }
+      .card-image { height: 200px; }
+      .card-price-section {
+        flex-direction: row;
+        align-items: center;
+        border-left: none;
+        border-top: 1px solid var(--card-border);
+        min-width: unset;
+      }
+      .card-actions {
+        flex-direction: row;
+        margin-top: 0;
+      }
+      .stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header-inner { flex-direction: column; align-items: flex-start; }
+      .criteria-inner { flex-direction: column; align-items: flex-start; }
+      .porsche-link { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="3"/>
+          <text x="50" y="58" text-anchor="middle" font-size="28" font-weight="bold" fill="currentColor">P</text>
+        </svg>
+        <h1>Taycan Turbo S <span>Finder</span></h1>
+      </div>
+      <div class="header-meta">
+        <div class="last-updated">
+          <div class="pulse"></div>
+          <span id="lastUpdated">Loading...</span>
+        </div>
+        <button class="btn btn-primary" id="refreshBtn" onclick="triggerScrape()">Refresh Now</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar"></div>
+
+  <div class="criteria-banner">
+    <div class="criteria-inner">
+      <span class="criteria-label">Search Criteria</span>
+      <span class="criteria-tag highlight">Taycan Turbo S</span>
+      <span class="criteria-tag">Max &pound;60,000</span>
+      <span class="criteria-tag">2020&ndash;2023</span>
+      <span class="criteria-tag">Performance Battery Plus</span>
+      <span class="criteria-tag">Sport Chrono</span>
+      <span class="criteria-tag">Panoramic Roof</span>
+      <span class="criteria-tag">Privacy Glass</span>
+      <span class="criteria-tag">Burmester Sound</span>
+      <span class="criteria-tag">4+1 Seats</span>
+      <span class="criteria-tag">Leather</span>
+      <a class="porsche-link" href="https://finder.porsche.com/gb/en-GB/search/taycan?model=taycan&maximum-price=60000&category=taycan-turbo-s&performance=sport-chrono-package&maximum-registratino-date=2023&minimum-registration-date=2020&e-performance=bigbattery&interior=2-plus-1-rear-seat&exterior=panoramic-roof&exterior=privacy-glazing&audio-communication=burmester-sound-system&interior-material=leather" target="_blank">
+        View on Porsche Finder &rarr;
+      </a>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="active" onclick="switchTab('active')">
+      Active Listings <span class="badge" id="activeCount">-</span>
+    </div>
+    <div class="tab" data-tab="removed" onclick="switchTab('removed')">
+      Sold / Removed <span class="badge" id="removedCount">-</span>
+    </div>
+    <div class="tab" data-tab="log" onclick="switchTab('log')">
+      Scrape History
+    </div>
+  </div>
+
+  <div class="listings-container">
+    <div id="activeTab" class="tab-content">
+      <div class="listings-grid" id="listingsGrid">
+        <div class="loading"><span class="spinner"></span> Loading listings...</div>
+      </div>
+    </div>
+
+    <div id="removedTab" class="tab-content" style="display:none;">
+      <div class="listings-grid" id="removedGrid"></div>
+    </div>
+
+    <div id="logTab" class="tab-content" style="display:none;">
+      <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:8px;overflow:hidden;">
+        <table class="log-table" id="logTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Listings Found</th>
+              <th>New</th>
+              <th>Price Changes</th>
+              <th>Removed</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const COLOR_MAP = {
+      'jet black': '#1a1a1a',
+      'black': '#1a1a1a',
+      'volcano grey': '#4a4a4a',
+      'grey': '#808080',
+      'white': '#f0f0f0',
+      'carrara white': '#f5f5f5',
+      'chalk': '#e8e4dc',
+      'gentian blue': '#1a3e72',
+      'neptune blue': '#1a5276',
+      'taycan blue': '#2b5ea7',
+      'frozen blue': '#7fb3d8',
+      'night blue': '#0a1a3a',
+      'cherry': '#8b1a2b',
+      'mahogany': '#4e2728',
+      'mamba green': '#2d4a2e',
+      'dolomite silver': '#c0c0c0',
+      'ice grey': '#c8d0d8',
+      'beige': '#d4c5a9',
+      'red': '#cc2233',
+      'bordeaux': '#5a1a2a',
+      'truffle brown': '#6b4c3b',
+      'atacama beige': '#c8b896',
+      'slate grey': '#6b7b8b'
+    };
+
+    function getColorHex(name) {
+      if (!name) return '#666';
+      const lower = name.toLowerCase().replace(' metallic', '');
+      return COLOR_MAP[lower] || '#666';
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return 'N/A';
+      const d = new Date(dateStr + 'Z');
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatPrice(price) {
+      if (!price) return 'N/A';
+      return '£' + price.toLocaleString('en-GB');
+    }
+
+    function renderListingCard(listing, isRemoved = false) {
+      const isNew = listing.is_new === 1;
+      const daysListed = listing.days_listed ? Math.floor(listing.days_listed) : 0;
+      const daysSinceSeen = listing.days_since_seen ? Math.floor(listing.days_since_seen) : 0;
+
+      return `
+        <div class="listing-card ${isNew ? 'new-listing' : ''} ${isRemoved ? 'removed-listing' : ''}">
+          <div class="card-image">
+            ${listing.image_url
+              ? `<img src="${listing.image_url}" alt="${listing.title}" loading="lazy" onerror="this.style.display='none'">`
+              : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--porsche-text-muted)">No image available</div>'}
+            <div class="badge-overlay">
+              ${isNew ? '<span class="badge-pill badge-new">New Today</span>' : ''}
+              ${isRemoved ? '<span class="badge-pill badge-removed">Removed</span>' : ''}
+              ${listing.condition === 'Porsche Approved Pre-Owned' ? '<span class="badge-pill badge-preowned">Approved Pre-Owned</span>' : ''}
+            </div>
+          </div>
+          <div class="card-details">
+            <div class="card-title">${listing.title || 'Porsche Taycan Turbo S'}</div>
+            <div class="card-colors">
+              <span>
+                <span class="color-dot" style="background:${getColorHex(listing.exterior_color)}"></span>
+                ${listing.exterior_color || 'Unknown exterior'}
+              </span>
+              <span>
+                <span class="color-dot" style="background:${getColorHex(listing.interior_color)}"></span>
+                ${listing.interior_color || 'Unknown'} interior
+              </span>
+            </div>
+            <div class="card-specs">
+              <div class="spec-item">
+                <span>&#9889;</span>
+                <span>${listing.fuel_type || 'Electric'}</span>
+              </div>
+              <div class="spec-item">
+                <span>&#128663;</span>
+                <span>${listing.mileage || 'N/A'}</span>
+              </div>
+              <div class="spec-item">
+                <span>&#128197;</span>
+                <span>${listing.registration_date || 'N/A'}</span>
+              </div>
+              <div class="spec-item">
+                <span>&#128100;</span>
+                <span>${listing.previous_owners || 'N/A'}</span>
+              </div>
+              <div class="spec-item">
+                <span>&#9881;</span>
+                <span>${listing.power || 'N/A'}</span>
+              </div>
+              <div class="spec-item">
+                <span>&#128268;</span>
+                <span>${listing.range_wltp ? listing.range_wltp + ' WLTP' : 'N/A'}</span>
+              </div>
+              ${listing.drivetrain ? `<div class="spec-item"><span>&#128736;</span><span>${listing.drivetrain}</span></div>` : ''}
+            </div>
+            <div class="card-dealer">${listing.dealer || 'Dealer not specified'}</div>
+          </div>
+          <div class="card-price-section">
+            <div>
+              <div class="card-price">${formatPrice(listing.price)}</div>
+              <div class="card-price-note">VAT not deductible</div>
+            </div>
+            <div class="card-actions">
+              ${!isRemoved ? `<a class="btn-view" href="${listing.detail_url}" target="_blank">View on Porsche</a>` : ''}
+              <div class="days-listed">${isRemoved
+                ? `Removed ${daysSinceSeen} day${daysSinceSeen !== 1 ? 's' : ''} ago`
+                : `Listed ${daysListed} day${daysListed !== 1 ? 's' : ''}`
+              }</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      document.getElementById(tab + 'Tab').style.display = 'block';
+    }
+
+    function showToast(msg, duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const stats = await res.json();
+
+        document.getElementById('activeCount').textContent = stats.active;
+        document.getElementById('removedCount').textContent = stats.removed;
+        document.getElementById('lastUpdated').textContent = stats.lastScrape
+          ? `Last updated: ${formatDate(stats.lastScrape)}`
+          : 'No data yet';
+
+        document.getElementById('statsBar').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-label">Active Listings</div>
+            <div class="stat-value green">${stats.active}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Lowest Price</div>
+            <div class="stat-value price">${formatPrice(stats.minPrice)}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Average Price</div>
+            <div class="stat-value price">${stats.avgPrice ? formatPrice(Math.round(stats.avgPrice)) : 'N/A'}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Ever Seen</div>
+            <div class="stat-value">${stats.totalSeen}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">New Today</div>
+            <div class="stat-value ${stats.newToday > 0 ? 'green' : ''}">${stats.newToday}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Scrapes</div>
+            <div class="stat-value">${stats.totalScrapes}</div>
+          </div>
+        `;
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      }
+    }
+
+    async function loadListings() {
+      try {
+        const res = await fetch('/api/listings');
+        const listings = await res.json();
+        const grid = document.getElementById('listingsGrid');
+
+        if (listings.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state">
+              <h3>No active listings found</h3>
+              <p>Run the scraper to fetch the latest listings from Porsche Finder.</p>
+              <br>
+              <button class="btn btn-primary" onclick="triggerScrape()">Run Scraper</button>
+            </div>
+          `;
+        } else {
+          grid.innerHTML = listings.map(l => renderListingCard(l)).join('');
+        }
+      } catch (err) {
+        document.getElementById('listingsGrid').innerHTML = `
+          <div class="empty-state">
+            <h3>Failed to load listings</h3>
+            <p>Make sure the server is running and the database has been initialized.</p>
+          </div>
+        `;
+      }
+    }
+
+    async function loadRemoved() {
+      try {
+        const res = await fetch('/api/removed');
+        const listings = await res.json();
+        const grid = document.getElementById('removedGrid');
+
+        if (listings.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state">
+              <h3>No removed listings yet</h3>
+              <p>Cars that disappear from Porsche Finder will show up here.</p>
+            </div>
+          `;
+        } else {
+          grid.innerHTML = listings.map(l => renderListingCard(l, true)).join('');
+        }
+      } catch (err) {
+        console.error('Failed to load removed:', err);
+      }
+    }
+
+    async function loadLog() {
+      try {
+        const res = await fetch('/api/scrape-log');
+        const log = await res.json();
+        const tbody = document.querySelector('#logTable tbody');
+
+        if (log.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--porsche-text-muted)">No scrape history yet</td></tr>';
+        } else {
+          tbody.innerHTML = log.map(entry => `
+            <tr>
+              <td>${formatDate(entry.scraped_at)}</td>
+              <td>${entry.listings_found}</td>
+              <td style="color:${entry.new_listings > 0 ? 'var(--porsche-green)' : 'inherit'}">${entry.new_listings > 0 ? '+' : ''}${entry.new_listings}</td>
+              <td style="color:${entry.price_changes > 0 ? 'var(--porsche-gold)' : 'inherit'}">${entry.price_changes}</td>
+              <td style="color:${entry.removed_listings > 0 ? 'var(--porsche-red)' : 'inherit'}">${entry.removed_listings}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Failed to load log:', err);
+      }
+    }
+
+    async function triggerScrape() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.textContent = 'Scraping...';
+
+      try {
+        await fetch('/api/scrape', { method: 'POST' });
+        showToast('Scrape started! Refresh the page in ~30s to see results.');
+      } catch (err) {
+        showToast('Failed to start scrape');
+      }
+
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = 'Refresh Now';
+        loadAll();
+      }, 35000);
+    }
+
+    function loadAll() {
+      loadStats();
+      loadListings();
+      loadRemoved();
+      loadLog();
+    }
+
+    // Initial load
+    loadAll();
+
+    // Auto-refresh data every 5 minutes
+    setInterval(loadAll, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
