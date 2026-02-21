@@ -33,8 +33,8 @@ A launchd job runs the scraper daily at 8am. To set it up manually:
 
 ```bash
 # Load the daily scrape job
-cp com.porsche-finder.scrape.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.porsche-finder.scrape.plist
+cp com.taycan-search.scrape.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.taycan-search.scrape.plist
 ```
 
 ## How It Works

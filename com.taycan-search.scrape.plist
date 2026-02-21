@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.porsche-finder.scrape</string>
+    <string>com.taycan-search.scrape</string>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/andy/porsche-finder/scraper.js</string>
+        <string>/Users/andy/taycan-search/scraper.js</string>
         <string>--headed</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/andy/porsche-finder</string>
+    <string>/Users/andy/taycan-search</string>
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
@@ -20,9 +20,9 @@
         <integer>0</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/andy/porsche-finder/scrape.log</string>
+    <string>/Users/andy/taycan-search/scrape.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/andy/porsche-finder/scrape-error.log</string>
+    <string>/Users/andy/taycan-search/scrape-error.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>

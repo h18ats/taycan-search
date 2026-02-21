@@ -240,7 +240,7 @@ export function buildEmailHtml(newCars, stats) {
         <!-- Dashboard Link -->
         <tr>
           <td style="padding:16px 0;text-align:center;">
-            <a href="https://porsche-finder-rho.vercel.app" style="display:inline-block;background:#222;color:#E8E8E8;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;border:1px solid #444;">
+            <a href="https://taycan-search.vercel.app" style="display:inline-block;background:#222;color:#E8E8E8;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;border:1px solid #444;">
               Open Dashboard
             </a>
           </td>
