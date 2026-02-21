@@ -531,6 +531,54 @@ export async function scrape({ headed = false } = {}) {
       console.log(`⚠️  Export skipped: ${exportErr.message}`);
     }
 
+    // Email notification if new listings found
+    if (newCount > 0) {
+      try {
+        const { execSync } = await import('child_process');
+        const newListings = listings.filter(l => {
+          const db2 = new Database(join(__dirname, 'porsche.db'));
+          const row = db2.prepare('SELECT first_seen FROM listings WHERE id = ?').get(l.id);
+          db2.close();
+          return row && row.first_seen && (Date.now() - new Date(row.first_seen + 'Z').getTime()) < 60 * 60 * 1000;
+        });
+
+        const carSummaries = (newListings.length > 0 ? newListings : listings.slice(0, newCount)).map(l => {
+          const premium = [
+            ...(l.equipmentTransmission || []),
+            ...(l.equipmentAssistance || [])
+          ].filter(e => e.match(/PCCB|InnoDrive|Head-Up|Carbon SportDesign/i));
+
+          return [
+            `${l.exteriorColor || 'Unknown'} / ${l.interiorColor || 'Unknown'} interior`,
+            `Price: ${l.priceText}`,
+            `Mileage: ${l.mileage || 'N/A'}`,
+            `Registered: ${l.registrationDate || 'N/A'}${l.registrationYear >= 2022 ? ' ✅ MEETS 2022+ TARGET' : ''}`,
+            `Owners: ${l.previousOwners != null ? l.previousOwners : 'N/A'}`,
+            `Dealer: ${l.dealer || 'Unknown'}`,
+            premium.length > 0 ? `Premium options: ${premium.join(', ')}` : null,
+            `View: ${l.detailUrl}`,
+          ].filter(Boolean).join('\n');
+        }).join('\n\n---\n\n');
+
+        const subject = `🚗 ${newCount} new Taycan Turbo S listing${newCount > 1 ? 's' : ''} found!`;
+        const body = [
+          `${newCount} new Porsche Taycan Turbo S listing${newCount > 1 ? 's' : ''} matching your spec just appeared on Porsche Finder.\n`,
+          carSummaries,
+          `\n---\nDashboard: https://porsche-finder-rho.vercel.app`,
+          `Porsche Finder: https://finder.porsche.com/gb/en-GB/search/taycan?model=taycan&maximum-price=60000&category=taycan-turbo-s`,
+        ].join('\n');
+
+        execSync(`python3 /Users/andy/gmail-tool/gmail.py send --to "andy.batty@hotmail.com" --subject "${subject.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`, {
+          stdio: 'pipe', timeout: 15000
+        });
+        console.log('📧 Email notification sent to andy.batty@hotmail.com');
+      } catch (emailErr) {
+        console.log(`⚠️  Email failed: ${emailErr.message?.substring(0, 100)}`);
+      }
+    } else {
+      console.log('📧 No new listings — skipping email');
+    }
+
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`✅ Scrape complete in ${elapsed}s`);
 
