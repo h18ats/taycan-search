@@ -8,7 +8,9 @@ debug-screenshot.png
 error-screenshot.png
 headed-screenshot.png
 dashboard-screenshot.png
+dashboard-v2.png
 api-response-*.json
+detail-page-text*.txt
 scrape.log
 scrape-error.log
 .DS_Store

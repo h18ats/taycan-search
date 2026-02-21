@@ -6,928 +6,472 @@
   <title>Taycan Turbo S Finder</title>
   <style>
     :root {
-      --porsche-red: #D5001C;
-      --porsche-dark: #0A0A0A;
-      --porsche-grey: #1A1A1A;
-      --porsche-mid-grey: #2A2A2A;
-      --porsche-light-grey: #4A4A4A;
-      --porsche-text: #E8E8E8;
-      --porsche-text-muted: #999;
-      --porsche-gold: #C4A862;
-      --porsche-green: #00B451;
-      --porsche-blue: #0084D6;
-      --card-bg: #161616;
-      --card-border: #2A2A2A;
+      --red: #D5001C;
+      --dark: #0A0A0A;
+      --grey: #161616;
+      --mid: #222;
+      --border: #2A2A2A;
+      --light: #4A4A4A;
+      --text: #E8E8E8;
+      --muted: #888;
+      --gold: #C4A862;
+      --green: #00B451;
+      --blue: #4DA6FF;
+      --amber: #F5A623;
     }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Porsche Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--porsche-dark);
-      color: var(--porsche-text);
-      line-height: 1.5;
-      min-height: 100vh;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--dark); color:var(--text); line-height:1.5; }
 
     /* Header */
-    .header {
-      background: linear-gradient(180deg, #111 0%, var(--porsche-dark) 100%);
-      border-bottom: 1px solid var(--card-border);
-      padding: 1.5rem 2rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+    .hdr { background:#111; border-bottom:1px solid var(--border); padding:1.2rem 2rem; position:sticky; top:0; z-index:100; }
+    .hdr-in { max-width:1400px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; }
+    .hdr h1 { font-size:1.2rem; font-weight:700; letter-spacing:.02em; }
+    .hdr h1 span { color:var(--red); }
+    .hdr-meta { display:flex; align-items:center; gap:1.2rem; font-size:.82rem; color:var(--muted); }
+    .pulse { width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; display:inline-block; margin-right:.3rem; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    .header-inner {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 2rem;
-    }
+    .btn { background:var(--mid); color:var(--text); border:1px solid var(--light); padding:.45rem .9rem; border-radius:4px; cursor:pointer; font-size:.82rem; transition:all .15s; }
+    .btn:hover { background:var(--light); }
+    .btn-red { background:var(--red); border-color:var(--red); color:#fff; }
+    .btn-red:hover { background:#B00018; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
+    /* Stats */
+    .stats { max-width:1400px; margin:1.2rem auto; padding:0 2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.75rem; }
+    .stat { background:var(--grey); border:1px solid var(--border); border-radius:8px; padding:.85rem 1rem; }
+    .stat-l { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:.15rem; }
+    .stat-v { font-size:1.4rem; font-weight:700; }
+    .stat-v.gold { color:var(--gold); }
+    .stat-v.green { color:var(--green); }
+    .stat-v.red { color:var(--red); }
+    .stat-v.amber { color:var(--amber); }
 
-    .brand svg {
-      width: 32px;
-      height: 32px;
-      fill: var(--porsche-text);
-    }
-
-    .brand h1 {
-      font-size: 1.25rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-
-    .brand h1 span {
-      color: var(--porsche-red);
-    }
-
-    .header-meta {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      font-size: 0.85rem;
-      color: var(--porsche-text-muted);
-    }
-
-    .last-updated {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .pulse {
-      width: 8px;
-      height: 8px;
-      background: var(--porsche-green);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .btn {
-      background: var(--porsche-mid-grey);
-      color: var(--porsche-text);
-      border: 1px solid var(--porsche-light-grey);
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-    }
-
-    .btn:hover {
-      background: var(--porsche-light-grey);
-    }
-
-    .btn-primary {
-      background: var(--porsche-red);
-      border-color: var(--porsche-red);
-    }
-
-    .btn-primary:hover {
-      background: #B00018;
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    /* Stats Bar */
-    .stats-bar {
-      max-width: 1400px;
-      margin: 1.5rem auto;
-      padding: 0 2rem;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
-    }
-
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--porsche-text-muted);
-      margin-bottom: 0.25rem;
-    }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    .stat-value.price { color: var(--porsche-gold); }
-    .stat-value.green { color: var(--porsche-green); }
-    .stat-value.red { color: var(--porsche-red); }
-
-    /* Search criteria banner */
-    .criteria-banner {
-      max-width: 1400px;
-      margin: 0 auto 1.5rem;
-      padding: 0 2rem;
-    }
-
-    .criteria-inner {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .criteria-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--porsche-text-muted);
-      margin-right: 0.5rem;
-    }
-
-    .criteria-tag {
-      background: var(--porsche-mid-grey);
-      border: 1px solid var(--porsche-light-grey);
-      border-radius: 4px;
-      padding: 0.25rem 0.6rem;
-      font-size: 0.8rem;
-      color: var(--porsche-text);
-    }
-
-    .criteria-tag.highlight {
-      border-color: var(--porsche-red);
-      color: var(--porsche-red);
-    }
-
-    .porsche-link {
-      margin-left: auto;
-      color: var(--porsche-blue);
-      text-decoration: none;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    .porsche-link:hover { text-decoration: underline; }
+    /* Criteria */
+    .crit { max-width:1400px; margin:0 auto 1rem; padding:0 2rem; }
+    .crit-in { background:var(--grey); border:1px solid var(--border); border-radius:8px; padding:.85rem 1rem; display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+    .crit-lbl { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-right:.3rem; }
+    .tag { background:var(--mid); border:1px solid var(--light); border-radius:4px; padding:.2rem .5rem; font-size:.78rem; }
+    .tag-hi { border-color:var(--red); color:var(--red); }
+    .tag-want { border-color:var(--amber); color:var(--amber); }
+    .plink { margin-left:auto; color:var(--blue); text-decoration:none; font-size:.82rem; }
+    .plink:hover { text-decoration:underline; }
 
     /* Tabs */
-    .tabs {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 2rem 1rem;
-      display: flex;
-      gap: 0;
-      border-bottom: 1px solid var(--card-border);
-    }
+    .tabs { max-width:1400px; margin:0 auto; padding:0 2rem .75rem; display:flex; gap:0; border-bottom:1px solid var(--border); }
+    .tab { padding:.5rem 1.2rem; cursor:pointer; font-size:.85rem; color:var(--muted); border-bottom:2px solid transparent; transition:all .15s; }
+    .tab:hover { color:var(--text); }
+    .tab.on { color:var(--text); border-bottom-color:var(--red); }
+    .tab .b { background:var(--mid); border-radius:10px; padding:.05rem .45rem; font-size:.72rem; margin-left:.3rem; }
+    .tab.on .b { background:var(--red); color:#fff; }
 
-    .tab {
-      padding: 0.6rem 1.5rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: var(--porsche-text-muted);
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-    }
+    /* Container */
+    .container { max-width:1400px; margin:1.2rem auto; padding:0 2rem; }
 
-    .tab:hover { color: var(--porsche-text); }
+    /* ===== LISTING CARD ===== */
+    .card { background:var(--grey); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:1.25rem; transition:border-color .2s; }
+    .card:hover { border-color:var(--light); }
+    .card.yr-match { border-left:3px solid var(--green); }
+    .card.yr-old { border-left:3px solid var(--amber); }
 
-    .tab.active {
-      color: var(--porsche-text);
-      border-bottom-color: var(--porsche-red);
-    }
+    .card-top { display:grid; grid-template-columns:360px 1fr 220px; }
 
-    .tab .badge {
-      background: var(--porsche-mid-grey);
-      border-radius: 10px;
-      padding: 0.1rem 0.5rem;
-      font-size: 0.75rem;
-      margin-left: 0.4rem;
-    }
+    .card-img { position:relative; height:240px; background:var(--mid); overflow:hidden; }
+    .card-img img { width:100%; height:100%; object-fit:cover; }
 
-    .tab.active .badge {
-      background: var(--porsche-red);
-    }
+    .badges { position:absolute; top:.6rem; left:.6rem; display:flex; gap:.35rem; flex-wrap:wrap; }
+    .pill { padding:.2rem .55rem; border-radius:4px; font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+    .pill-new { background:var(--green); color:#fff; }
+    .pill-pao { background:rgba(0,0,0,.75); color:var(--gold); backdrop-filter:blur(6px); }
+    .pill-removed { background:var(--red); color:#fff; }
 
-    /* Listings Grid */
-    .listings-container {
-      max-width: 1400px;
-      margin: 1.5rem auto;
-      padding: 0 2rem;
-    }
+    /* Days listed badge - bottom right of image */
+    .days-badge { position:absolute; bottom:.6rem; right:.6rem; padding:.35rem .7rem; border-radius:4px; font-size:.75rem; font-weight:700; backdrop-filter:blur(8px); }
+    .days-fresh { background:rgba(0,180,81,.85); color:#fff; }
+    .days-normal { background:rgba(0,0,0,.75); color:var(--text); }
+    .days-stale { background:rgba(245,166,35,.85); color:#000; }
+    .days-old { background:rgba(213,0,28,.85); color:#fff; }
 
-    .listings-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-    }
+    .card-info { padding:1rem 1.25rem; display:flex; flex-direction:column; gap:.5rem; }
+    .card-title { font-size:1.1rem; font-weight:700; display:flex; align-items:center; gap:.6rem; }
+    .yr-tag { font-size:.7rem; padding:.15rem .4rem; border-radius:3px; font-weight:600; }
+    .yr-good { background:var(--green); color:#fff; }
+    .yr-ok { background:var(--amber); color:#000; }
+    .yr-old-tag { background:var(--light); color:var(--muted); }
 
-    .listing-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      overflow: hidden;
-      display: grid;
-      grid-template-columns: 380px 1fr auto;
-      transition: border-color 0.3s, transform 0.2s;
-    }
+    .card-colors { display:flex; gap:1rem; font-size:.82rem; }
+    .cdot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:.25rem; vertical-align:middle; border:1px solid rgba(255,255,255,.15); }
 
-    .listing-card:hover {
-      border-color: var(--porsche-light-grey);
-      transform: translateY(-1px);
-    }
+    .card-specs { display:grid; grid-template-columns:repeat(2,1fr); gap:.3rem 1.2rem; font-size:.82rem; color:var(--muted); }
+    .spec { display:flex; align-items:center; gap:.35rem; }
+    .card-dealer { font-size:.78rem; color:var(--muted); margin-top:auto; padding-top:.4rem; border-top:1px solid var(--border); }
 
-    .listing-card.new-listing {
-      border-color: var(--porsche-green);
-      box-shadow: 0 0 20px rgba(0, 180, 81, 0.1);
-    }
+    .card-price { padding:1rem 1.25rem; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; border-left:1px solid var(--border); }
+    .price { font-size:1.6rem; font-weight:700; color:var(--gold); }
+    .price-note { font-size:.72rem; color:var(--muted); }
+    .btn-view { display:inline-block; background:var(--red); color:#fff; border:none; padding:.55rem 1.2rem; border-radius:4px; text-decoration:none; text-align:center; font-size:.82rem; font-weight:600; cursor:pointer; transition:background .15s; }
+    .btn-view:hover { background:#B00018; }
 
-    .listing-card.removed-listing {
-      opacity: 0.6;
-      border-color: var(--porsche-red);
-    }
+    /* ===== EQUIPMENT SECTION (collapsible) ===== */
+    .equip-section { border-top:1px solid var(--border); }
+    .equip-toggle { width:100%; background:none; border:none; color:var(--text); padding:.75rem 1.25rem; cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-size:.85rem; font-weight:600; }
+    .equip-toggle:hover { background:var(--mid); }
+    .equip-toggle .arrow { transition:transform .2s; }
+    .equip-toggle.open .arrow { transform:rotate(180deg); }
+    .equip-body { display:none; padding:0 1.25rem 1rem; }
+    .equip-body.show { display:block; }
 
-    .card-image {
-      position: relative;
-      height: 240px;
-      overflow: hidden;
-      background: var(--porsche-grey);
-    }
+    /* Highlights chips */
+    .highlights { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.75rem; }
+    .hl-chip { padding:.25rem .6rem; border-radius:4px; font-size:.78rem; border:1px solid var(--border); background:var(--mid); }
+    .hl-chip.premium { border-color:var(--gold); color:var(--gold); background:rgba(196,168,98,.08); }
+    .hl-chip.great { border-color:var(--green); color:var(--green); background:rgba(0,180,81,.08); }
+    .hl-chip.criteria { border-color:var(--blue); color:var(--blue); background:rgba(77,166,255,.06); }
 
-    .card-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+    /* Equipment grid */
+    .eq-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:.75rem; }
+    .eq-cat { background:var(--mid); border:1px solid var(--border); border-radius:6px; padding:.75rem; }
+    .eq-cat-title { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:.4rem; font-weight:600; }
+    .eq-item { font-size:.8rem; padding:.15rem 0; display:flex; align-items:flex-start; gap:.35rem; }
+    .eq-item::before { content:''; display:inline-block; width:4px; height:4px; border-radius:50%; background:var(--light); margin-top:.45rem; flex-shrink:0; }
+    .eq-item.standout::before { background:var(--gold); width:6px; height:6px; margin-top:.35rem; }
+    .eq-item.standout { color:var(--gold); font-weight:500; }
 
-    .card-image .badge-overlay {
-      position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      display: flex;
-      gap: 0.4rem;
-    }
+    /* History section */
+    .history { font-size:.8rem; color:var(--muted); padding:.5rem 1.25rem .75rem; border-top:1px solid var(--border); display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.5rem; }
+    .hist-item { }
+    .hist-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--light); }
 
-    .badge-pill {
-      padding: 0.25rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
+    /* Log table */
+    .ltbl { width:100%; border-collapse:collapse; font-size:.82rem; }
+    .ltbl th { text-align:left; padding:.5rem .85rem; border-bottom:1px solid var(--border); color:var(--muted); font-weight:500; text-transform:uppercase; font-size:.72rem; letter-spacing:.04em; }
+    .ltbl td { padding:.5rem .85rem; border-bottom:1px solid var(--border); }
 
-    .badge-new {
-      background: var(--porsche-green);
-      color: #fff;
-    }
+    .empty { text-align:center; padding:3rem 2rem; color:var(--muted); }
+    .empty h3 { color:var(--text); margin-bottom:.4rem; }
+    .loading { text-align:center; padding:3rem; color:var(--muted); }
+    .spin { display:inline-block; width:20px; height:20px; border:2px solid var(--light); border-top-color:var(--red); border-radius:50%; animation:spin .7s linear infinite; margin-right:.4rem; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    .badge-preowned {
-      background: rgba(0,0,0,0.7);
-      color: var(--porsche-gold);
-      backdrop-filter: blur(8px);
-    }
+    .toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--green); color:#fff; padding:.65rem 1.1rem; border-radius:6px; font-size:.82rem; display:none; z-index:200; box-shadow:0 4px 20px rgba(0,0,0,.3); }
+    .toast.show { display:block; animation:slideIn .25s ease; }
+    @keyframes slideIn { from{transform:translateY(15px);opacity:0} to{transform:translateY(0);opacity:1} }
 
-    .badge-price-drop {
-      background: var(--porsche-green);
-      color: #fff;
-    }
-
-    .badge-removed {
-      background: var(--porsche-red);
-      color: #fff;
-    }
-
-    .card-details {
-      padding: 1.25rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-    .card-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-    }
-
-    .card-colors {
-      display: flex;
-      gap: 1rem;
-      font-size: 0.85rem;
-    }
-
-    .color-dot {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      margin-right: 0.3rem;
-      vertical-align: middle;
-      border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    .card-specs {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.4rem 1.5rem;
-      font-size: 0.85rem;
-      color: var(--porsche-text-muted);
-      margin-top: 0.25rem;
-    }
-
-    .card-specs .spec-item {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .spec-icon {
-      width: 16px;
-      height: 16px;
-      opacity: 0.6;
-    }
-
-    .card-dealer {
-      margin-top: auto;
-      font-size: 0.8rem;
-      color: var(--porsche-text-muted);
-      padding-top: 0.5rem;
-      border-top: 1px solid var(--card-border);
-    }
-
-    .card-price-section {
-      padding: 1.25rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      justify-content: space-between;
-      min-width: 200px;
-      border-left: 1px solid var(--card-border);
-    }
-
-    .card-price {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: var(--porsche-gold);
-    }
-
-    .card-price-note {
-      font-size: 0.75rem;
-      color: var(--porsche-text-muted);
-    }
-
-    .card-price-history {
-      font-size: 0.8rem;
-      color: var(--porsche-green);
-      margin-top: 0.25rem;
-    }
-
-    .card-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      margin-top: auto;
-    }
-
-    .btn-view {
-      background: var(--porsche-red);
-      color: #fff;
-      border: none;
-      padding: 0.6rem 1.5rem;
-      border-radius: 4px;
-      text-decoration: none;
-      text-align: center;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .btn-view:hover { background: #B00018; }
-
-    .days-listed {
-      font-size: 0.75rem;
-      color: var(--porsche-text-muted);
-      text-align: right;
-    }
-
-    /* Scrape Log */
-    .log-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-
-    .log-table th {
-      text-align: left;
-      padding: 0.6rem 1rem;
-      border-bottom: 1px solid var(--card-border);
-      color: var(--porsche-text-muted);
-      font-weight: 500;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.05em;
-    }
-
-    .log-table td {
-      padding: 0.6rem 1rem;
-      border-bottom: 1px solid var(--card-border);
-    }
-
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--porsche-text-muted);
-    }
-
-    .empty-state h3 {
-      font-size: 1.2rem;
-      margin-bottom: 0.5rem;
-      color: var(--porsche-text);
-    }
-
-    /* Loading */
-    .loading {
-      text-align: center;
-      padding: 3rem;
-      color: var(--porsche-text-muted);
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 24px;
-      height: 24px;
-      border: 2px solid var(--porsche-light-grey);
-      border-top-color: var(--porsche-red);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-right: 0.5rem;
-      vertical-align: middle;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Toast notification */
-    .toast {
-      position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      background: var(--porsche-green);
-      color: #fff;
-      padding: 0.75rem 1.25rem;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      display: none;
-      z-index: 200;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-
-    .toast.show {
-      display: block;
-      animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-
-    /* Responsive */
-    @media (max-width: 1024px) {
-      .listing-card {
-        grid-template-columns: 1fr;
-      }
-      .card-image { height: 200px; }
-      .card-price-section {
-        flex-direction: row;
-        align-items: center;
-        border-left: none;
-        border-top: 1px solid var(--card-border);
-        min-width: unset;
-      }
-      .card-actions {
-        flex-direction: row;
-        margin-top: 0;
-      }
-      .stats-bar {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 640px) {
-      .header-inner { flex-direction: column; align-items: flex-start; }
-      .criteria-inner { flex-direction: column; align-items: flex-start; }
-      .porsche-link { margin-left: 0; }
+    @media(max-width:1024px) {
+      .card-top { grid-template-columns:1fr; }
+      .card-img { height:200px; }
+      .card-price { flex-direction:row; align-items:center; border-left:none; border-top:1px solid var(--border); }
+      .eq-grid { grid-template-columns:1fr; }
     }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <div class="header-inner">
-      <div class="brand">
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="3"/>
-          <text x="50" y="58" text-anchor="middle" font-size="28" font-weight="bold" fill="currentColor">P</text>
-        </svg>
-        <h1>Taycan Turbo S <span>Finder</span></h1>
-      </div>
-      <div class="header-meta">
-        <div class="last-updated">
-          <div class="pulse"></div>
-          <span id="lastUpdated">Loading...</span>
-        </div>
-        <button class="btn btn-primary" id="refreshBtn" onclick="triggerScrape()">Refresh Now</button>
-      </div>
-    </div>
+<div class="hdr"><div class="hdr-in">
+  <h1>Taycan Turbo S <span>Finder</span></h1>
+  <div class="hdr-meta">
+    <span><span class="pulse"></span> <span id="lastUp">Loading...</span></span>
+    <button class="btn btn-red" id="refreshBtn" onclick="doScrape()">Refresh Now</button>
   </div>
+</div></div>
 
-  <div class="stats-bar" id="statsBar"></div>
+<div class="stats" id="statsBar"></div>
 
-  <div class="criteria-banner">
-    <div class="criteria-inner">
-      <span class="criteria-label">Search Criteria</span>
-      <span class="criteria-tag highlight">Taycan Turbo S</span>
-      <span class="criteria-tag">Max &pound;60,000</span>
-      <span class="criteria-tag">2020&ndash;2023</span>
-      <span class="criteria-tag">Performance Battery Plus</span>
-      <span class="criteria-tag">Sport Chrono</span>
-      <span class="criteria-tag">Panoramic Roof</span>
-      <span class="criteria-tag">Privacy Glass</span>
-      <span class="criteria-tag">Burmester Sound</span>
-      <span class="criteria-tag">4+1 Seats</span>
-      <span class="criteria-tag">Leather</span>
-      <a class="porsche-link" href="https://finder.porsche.com/gb/en-GB/search/taycan?model=taycan&maximum-price=60000&category=taycan-turbo-s&performance=sport-chrono-package&maximum-registratino-date=2023&minimum-registration-date=2020&e-performance=bigbattery&interior=2-plus-1-rear-seat&exterior=panoramic-roof&exterior=privacy-glazing&audio-communication=burmester-sound-system&interior-material=leather" target="_blank">
-        View on Porsche Finder &rarr;
-      </a>
-    </div>
-  </div>
+<div class="crit"><div class="crit-in">
+  <span class="crit-lbl">Filters</span>
+  <span class="tag tag-hi">Taycan Turbo S</span>
+  <span class="tag">Max &pound;60k</span>
+  <span class="tag">2020&ndash;2023</span>
+  <span class="tag">Perf Battery+</span>
+  <span class="tag">Sport Chrono</span>
+  <span class="tag">Pano Roof</span>
+  <span class="tag">Privacy Glass</span>
+  <span class="tag">Burmester</span>
+  <span class="tag">4+1 Seats</span>
+  <span class="tag">Leather</span>
+  <span class="tag tag-want">Ideal: 2022+</span>
+  <a class="plink" href="https://finder.porsche.com/gb/en-GB/search/taycan?model=taycan&maximum-price=60000&category=taycan-turbo-s&performance=sport-chrono-package&maximum-registratino-date=2023&minimum-registration-date=2020&e-performance=bigbattery&interior=2-plus-1-rear-seat&exterior=panoramic-roof&exterior=privacy-glazing&audio-communication=burmester-sound-system&interior-material=leather" target="_blank">Porsche Finder &rarr;</a>
+</div></div>
 
-  <div class="tabs">
-    <div class="tab active" data-tab="active" onclick="switchTab('active')">
-      Active Listings <span class="badge" id="activeCount">-</span>
-    </div>
-    <div class="tab" data-tab="removed" onclick="switchTab('removed')">
-      Sold / Removed <span class="badge" id="removedCount">-</span>
-    </div>
-    <div class="tab" data-tab="log" onclick="switchTab('log')">
-      Scrape History
-    </div>
-  </div>
+<div class="tabs">
+  <div class="tab on" data-t="active" onclick="sw('active')">Active <span class="b" id="nActive">-</span></div>
+  <div class="tab" data-t="removed" onclick="sw('removed')">Sold / Removed <span class="b" id="nRemoved">-</span></div>
+  <div class="tab" data-t="log" onclick="sw('log')">History</div>
+</div>
 
-  <div class="listings-container">
-    <div id="activeTab" class="tab-content">
-      <div class="listings-grid" id="listingsGrid">
-        <div class="loading"><span class="spinner"></span> Loading listings...</div>
-      </div>
-    </div>
+<div class="container">
+  <div id="activeTab"><div id="grid"><div class="loading"><span class="spin"></span> Loading...</div></div></div>
+  <div id="removedTab" style="display:none"><div id="rGrid"></div></div>
+  <div id="logTab" style="display:none"><div style="background:var(--grey);border:1px solid var(--border);border-radius:8px;overflow:hidden"><table class="ltbl" id="logTbl"><thead><tr><th>Date</th><th>Found</th><th>New</th><th>Price Chg</th><th>Removed</th></tr></thead><tbody></tbody></table></div></div>
+</div>
 
-    <div id="removedTab" class="tab-content" style="display:none;">
-      <div class="listings-grid" id="removedGrid"></div>
-    </div>
+<div class="toast" id="toast"></div>
 
-    <div id="logTab" class="tab-content" style="display:none;">
-      <div style="background:var(--card-bg);border:1px solid var(--card-border);border-radius:8px;overflow:hidden;">
-        <table class="log-table" id="logTable">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Listings Found</th>
-              <th>New</th>
-              <th>Price Changes</th>
-              <th>Removed</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+<script>
+// ===== Premium feature tiers =====
+// These highlight what genuinely matters when buying a Taycan Turbo S
+const PREMIUM_FEATURES = [
+  'Porsche Ceramic Composite Brake (PCCB)',
+  'PCCB',
+  'Porsche InnoDrive',
+  'InnoDrive',
+  'Head-Up Display',
+  'Carbon SportDesign Package',
+];
+const GREAT_FEATURES = [
+  'Lane Change Assist',
+  '3D Surround View',
+  'Active Parking Support',
+  'HomeLink',
+  'carbon aeroblades',
+  'Carbon',
+  'Race-Tex',
+  'Matrix LED',
+  'Glacier Ice',
+  'PDLS',
+  'Porsche Dynamic Light',
+  'Adaptive Cruise',
+];
+const CRITERIA_FEATURES = [
+  'Burmester', 'Sport Chrono', 'Panoramic', 'Performance Battery',
+  'ParkAssist', 'Surround View', '4+1', 'Privacy', 'Air Suspension'
+];
 
-  <div class="toast" id="toast"></div>
+function featureTier(name) {
+  for (const f of PREMIUM_FEATURES) { if (name.includes(f)) return 'premium'; }
+  for (const f of GREAT_FEATURES) { if (name.includes(f)) return 'great'; }
+  for (const f of CRITERIA_FEATURES) { if (name.includes(f)) return 'criteria'; }
+  return '';
+}
 
-  <script>
-    const COLOR_MAP = {
-      'jet black': '#1a1a1a',
-      'black': '#1a1a1a',
-      'volcano grey': '#4a4a4a',
-      'grey': '#808080',
-      'white': '#f0f0f0',
-      'carrara white': '#f5f5f5',
-      'chalk': '#e8e4dc',
-      'gentian blue': '#1a3e72',
-      'neptune blue': '#1a5276',
-      'taycan blue': '#2b5ea7',
-      'frozen blue': '#7fb3d8',
-      'night blue': '#0a1a3a',
-      'cherry': '#8b1a2b',
-      'mahogany': '#4e2728',
-      'mamba green': '#2d4a2e',
-      'dolomite silver': '#c0c0c0',
-      'ice grey': '#c8d0d8',
-      'beige': '#d4c5a9',
-      'red': '#cc2233',
-      'bordeaux': '#5a1a2a',
-      'truffle brown': '#6b4c3b',
-      'atacama beige': '#c8b896',
-      'slate grey': '#6b7b8b'
-    };
+const COLORS = {
+  'jet black':'#1a1a1a','volcano grey':'#4a4a4a','carrara white':'#f5f5f5','chalk':'#e8e4dc',
+  'gentian blue':'#1a3e72','neptune blue':'#1a5276','frozen blue':'#7fb3d8','night blue':'#0a1a3a',
+  'cherry':'#8b1a2b','mahogany':'#4e2728','mamba green':'#2d4a2e','dolomite silver':'#c0c0c0',
+  'ice grey':'#c8d0d8','taycan blue':'#2b5ea7','black':'#1a1a1a','white':'#f0f0f0',
+  'beige':'#d4c5a9','red':'#cc2233','bordeaux':'#5a1a2a','truffle brown':'#6b4c3b',
+};
+function colorHex(n) { if (!n) return '#555'; const k = n.toLowerCase().replace(' metallic',''); return COLORS[k]||'#555'; }
+function fmtDate(d) { if (!d) return 'N/A'; return new Date(d+'Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function fmtPrice(p) { return p ? '\u00A3'+p.toLocaleString('en-GB') : 'N/A'; }
 
-    function getColorHex(name) {
-      if (!name) return '#666';
-      const lower = name.toLowerCase().replace(' metallic', '');
-      return COLOR_MAP[lower] || '#666';
-    }
+function daysClass(d) {
+  if (d <= 1) return 'days-fresh';
+  if (d <= 7) return 'days-normal';
+  if (d <= 21) return 'days-stale';
+  return 'days-old';
+}
+function daysLabel(d) {
+  if (d === 0) return 'New today';
+  if (d === 1) return '1 day';
+  return d + ' days';
+}
 
-    function formatDate(dateStr) {
-      if (!dateStr) return 'N/A';
-      const d = new Date(dateStr + 'Z');
-      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    }
+function yearTag(y) {
+  if (!y) return '';
+  if (y >= 2022) return `<span class="yr-tag yr-good">${y}</span>`;
+  if (y === 2021) return `<span class="yr-tag yr-ok">${y}</span>`;
+  return `<span class="yr-tag yr-old-tag">${y}</span>`;
+}
 
-    function formatPrice(price) {
-      if (!price) return 'N/A';
-      return '£' + price.toLocaleString('en-GB');
-    }
+function renderCard(l, removed) {
+  const isNew = l.is_new === 1;
+  const days = removed ? (l.days_was_listed || 0) : (l.days_listed || 0);
+  const daysSince = l.days_since_seen || 0;
+  const yr = l.registration_year;
+  const yrClass = yr >= 2022 ? 'yr-match' : 'yr-old';
 
-    function renderListingCard(listing, isRemoved = false) {
-      const isNew = listing.is_new === 1;
-      const daysListed = listing.days_listed ? Math.floor(listing.days_listed) : 0;
-      const daysSinceSeen = listing.days_since_seen ? Math.floor(listing.days_since_seen) : 0;
+  // Combine all equipment into flat list for standout detection
+  const allEquip = [
+    ...(l.equipment_exterior||[]), ...(l.equipment_wheels||[]),
+    ...(l.equipment_interior||[]), ...(l.equipment_audio||[]),
+    ...(l.equipment_emobility||[]), ...(l.equipment_lighting||[]),
+    ...(l.equipment_assistance||[]), ...(l.equipment_transmission||[])
+  ];
 
-      return `
-        <div class="listing-card ${isNew ? 'new-listing' : ''} ${isRemoved ? 'removed-listing' : ''}">
-          <div class="card-image">
-            ${listing.image_url
-              ? `<img src="${listing.image_url}" alt="${listing.title}" loading="lazy" onerror="this.style.display='none'">`
-              : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--porsche-text-muted)">No image available</div>'}
-            <div class="badge-overlay">
-              ${isNew ? '<span class="badge-pill badge-new">New Today</span>' : ''}
-              ${isRemoved ? '<span class="badge-pill badge-removed">Removed</span>' : ''}
-              ${listing.condition === 'Porsche Approved Pre-Owned' ? '<span class="badge-pill badge-preowned">Approved Pre-Owned</span>' : ''}
-            </div>
+  // Count premium features
+  const premiumCount = allEquip.filter(e => featureTier(e)==='premium').length;
+  const greatCount = allEquip.filter(e => featureTier(e)==='great').length;
+
+  const hlChips = (l.equipment_highlights||[]).map(h => {
+    const tier = featureTier(h);
+    return `<span class="hl-chip ${tier}">${h}</span>`;
+  }).join('');
+
+  const eqCategories = [
+    { title:'Exterior', items:l.equipment_exterior },
+    { title:'Transmission / Brakes', items:l.equipment_transmission },
+    { title:'Wheels', items:l.equipment_wheels },
+    { title:'Interior', items:l.equipment_interior },
+    { title:'Audio / Comms', items:l.equipment_audio },
+    { title:'E-Mobility / Charging', items:l.equipment_emobility },
+    { title:'Lighting / Vision', items:l.equipment_lighting },
+    { title:'Assistance / Comfort', items:l.equipment_assistance },
+  ].filter(c => c.items && c.items.length > 0);
+
+  const uid = l.id.replace(/[^a-zA-Z0-9]/g, '_');
+
+  return `
+    <div class="card ${yrClass} ${removed?'':''}">
+      <div class="card-top">
+        <div class="card-img">
+          ${l.image_url ? `<img src="${l.image_url}" alt="${l.title}" loading="lazy" onerror="this.style.display='none'">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">No image</div>'}
+          <div class="badges">
+            ${isNew ? '<span class="pill pill-new">New</span>' : ''}
+            ${removed ? '<span class="pill pill-removed">Removed</span>' : ''}
+            ${l.condition==='Porsche Approved Pre-Owned' ? '<span class="pill pill-pao">Approved Pre-Owned</span>' : ''}
           </div>
-          <div class="card-details">
-            <div class="card-title">${listing.title || 'Porsche Taycan Turbo S'}</div>
-            <div class="card-colors">
-              <span>
-                <span class="color-dot" style="background:${getColorHex(listing.exterior_color)}"></span>
-                ${listing.exterior_color || 'Unknown exterior'}
-              </span>
-              <span>
-                <span class="color-dot" style="background:${getColorHex(listing.interior_color)}"></span>
-                ${listing.interior_color || 'Unknown'} interior
-              </span>
-            </div>
-            <div class="card-specs">
-              <div class="spec-item">
-                <span>&#9889;</span>
-                <span>${listing.fuel_type || 'Electric'}</span>
-              </div>
-              <div class="spec-item">
-                <span>&#128663;</span>
-                <span>${listing.mileage || 'N/A'}</span>
-              </div>
-              <div class="spec-item">
-                <span>&#128197;</span>
-                <span>${listing.registration_date || 'N/A'}</span>
-              </div>
-              <div class="spec-item">
-                <span>&#128100;</span>
-                <span>${listing.previous_owners || 'N/A'}</span>
-              </div>
-              <div class="spec-item">
-                <span>&#9881;</span>
-                <span>${listing.power || 'N/A'}</span>
-              </div>
-              <div class="spec-item">
-                <span>&#128268;</span>
-                <span>${listing.range_wltp ? listing.range_wltp + ' WLTP' : 'N/A'}</span>
-              </div>
-              ${listing.drivetrain ? `<div class="spec-item"><span>&#128736;</span><span>${listing.drivetrain}</span></div>` : ''}
-            </div>
-            <div class="card-dealer">${listing.dealer || 'Dealer not specified'}</div>
-          </div>
-          <div class="card-price-section">
-            <div>
-              <div class="card-price">${formatPrice(listing.price)}</div>
-              <div class="card-price-note">VAT not deductible</div>
-            </div>
-            <div class="card-actions">
-              ${!isRemoved ? `<a class="btn-view" href="${listing.detail_url}" target="_blank">View on Porsche</a>` : ''}
-              <div class="days-listed">${isRemoved
-                ? `Removed ${daysSinceSeen} day${daysSinceSeen !== 1 ? 's' : ''} ago`
-                : `Listed ${daysListed} day${daysListed !== 1 ? 's' : ''}`
-              }</div>
-            </div>
+          <div class="days-badge ${removed ? 'days-normal' : daysClass(days)}">
+            ${removed
+              ? `Was listed ${days} day${days!==1?'s':''}`
+              : daysLabel(days)}
           </div>
         </div>
-      `;
-    }
-
-    function switchTab(tab) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-      document.getElementById(tab + 'Tab').style.display = 'block';
-    }
-
-    function showToast(msg, duration = 3000) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), duration);
-    }
-
-    async function loadStats() {
-      try {
-        const res = await fetch('/api/stats');
-        const stats = await res.json();
-
-        document.getElementById('activeCount').textContent = stats.active;
-        document.getElementById('removedCount').textContent = stats.removed;
-        document.getElementById('lastUpdated').textContent = stats.lastScrape
-          ? `Last updated: ${formatDate(stats.lastScrape)}`
-          : 'No data yet';
-
-        document.getElementById('statsBar').innerHTML = `
-          <div class="stat-card">
-            <div class="stat-label">Active Listings</div>
-            <div class="stat-value green">${stats.active}</div>
+        <div class="card-info">
+          <div class="card-title">${l.title||'Porsche Taycan Turbo S'} ${yearTag(yr)}</div>
+          <div class="card-colors">
+            <span><span class="cdot" style="background:${colorHex(l.exterior_color)}"></span>${l.exterior_color||'Unknown'}</span>
+            <span><span class="cdot" style="background:${colorHex(l.interior_color)}"></span>${l.interior_color_full||l.interior_color||'Unknown'}</span>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Lowest Price</div>
-            <div class="stat-value price">${formatPrice(stats.minPrice)}</div>
+          <div class="card-specs">
+            <div class="spec">&#9889; ${l.mileage||'N/A'}</div>
+            <div class="spec">&#128197; Reg: ${l.registration_date||'N/A'}</div>
+            <div class="spec">&#128100; ${l.previous_owners != null ? l.previous_owners+' prev owner'+(l.previous_owners!==1?'s':'') : 'N/A'}</div>
+            <div class="spec">&#9881; ${l.power||'N/A'}</div>
+            <div class="spec">&#128268; ${l.range_wltp ? l.range_wltp+' WLTP' : 'N/A'}</div>
+            <div class="spec">&#128736; ${l.drivetrain||'AWD'}</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Average Price</div>
-            <div class="stat-value price">${stats.avgPrice ? formatPrice(Math.round(stats.avgPrice)) : 'N/A'}</div>
+          <div class="card-dealer">
+            ${l.dealer||'Unknown dealer'}${l.dealer_address ? ' &mdash; '+l.dealer_address : ''}
+            ${l.vin ? ` &middot; VIN: ${l.vin}` : ''}
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Ever Seen</div>
-            <div class="stat-value">${stats.totalSeen}</div>
+        </div>
+        <div class="card-price">
+          <div>
+            <div class="price">${fmtPrice(l.price)}</div>
+            <div class="price-note">VAT not deductible</div>
+            ${premiumCount > 0 ? `<div style="margin-top:.3rem;font-size:.75rem;color:var(--gold)">${premiumCount} premium option${premiumCount>1?'s':''}</div>` : ''}
           </div>
-          <div class="stat-card">
-            <div class="stat-label">New Today</div>
-            <div class="stat-value ${stats.newToday > 0 ? 'green' : ''}">${stats.newToday}</div>
+          <div style="display:flex;flex-direction:column;gap:.4rem;align-items:flex-end;margin-top:auto">
+            ${!removed ? `<a class="btn-view" href="${l.detail_url}" target="_blank">View on Porsche</a>` : ''}
+            ${removed ? `<div style="font-size:.75rem;color:var(--muted)">Removed ${daysSince} day${daysSince!==1?'s':''} ago</div>` : ''}
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total Scrapes</div>
-            <div class="stat-value">${stats.totalScrapes}</div>
+        </div>
+      </div>
+
+      ${(l.equipment_highlights && l.equipment_highlights.length > 0) || eqCategories.length > 0 ? `
+      <!-- Equipment -->
+      <div class="equip-section">
+        <button class="equip-toggle" onclick="toggleEquip('${uid}', this)">
+          <span>Equipment &amp; Features (${allEquip.length} options${premiumCount?', '+premiumCount+' premium':''})</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="equip-body" id="eq_${uid}">
+          ${hlChips ? `<div style="margin-bottom:.5rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Highlights</div><div class="highlights">${hlChips}</div>` : ''}
+          <div class="eq-grid">
+            ${eqCategories.map(cat => `
+              <div class="eq-cat">
+                <div class="eq-cat-title">${cat.title}</div>
+                ${cat.items.map(item => `<div class="eq-item ${featureTier(item)==='premium'?'standout':''}">${item}</div>`).join('')}
+              </div>
+            `).join('')}
           </div>
-        `;
-      } catch (err) {
-        console.error('Failed to load stats:', err);
-      }
+        </div>
+      </div>` : ''}
+
+      ${l.service_history || l.latest_maintenance || l.description ? `
+      <div class="history">
+        ${l.service_history ? `<div class="hist-item"><div class="hist-label">Service History</div>${l.service_history}</div>` : ''}
+        ${l.latest_maintenance ? `<div class="hist-item"><div class="hist-label">Latest Maintenance</div>${l.latest_maintenance}</div>` : ''}
+        ${l.warranty ? `<div class="hist-item"><div class="hist-label">Warranty</div>${l.warranty}</div>` : ''}
+        ${l.battery_warranty ? `<div class="hist-item"><div class="hist-label">HV Battery Warranty</div>${l.battery_warranty}</div>` : ''}
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function toggleEquip(uid, btn) {
+  const body = document.getElementById('eq_'+uid);
+  body.classList.toggle('show');
+  btn.classList.toggle('open');
+}
+
+function sw(tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelector(`[data-t="${tab}"]`).classList.add('on');
+  ['activeTab','removedTab','logTab'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById(tab+'Tab').style.display='block';
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+async function loadStats() {
+  try {
+    const s = await (await fetch('/api/stats')).json();
+    document.getElementById('nActive').textContent = s.active;
+    document.getElementById('nRemoved').textContent = s.removed;
+    document.getElementById('lastUp').textContent = s.lastScrape ? 'Updated: '+fmtDate(s.lastScrape) : 'No data yet';
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat"><div class="stat-l">Active Listings</div><div class="stat-v green">${s.active}</div></div>
+      <div class="stat"><div class="stat-l">Lowest Price</div><div class="stat-v gold">${fmtPrice(s.minPrice)}</div></div>
+      <div class="stat"><div class="stat-l">Average Price</div><div class="stat-v gold">${s.avgPrice?fmtPrice(Math.round(s.avgPrice)):'N/A'}</div></div>
+      <div class="stat"><div class="stat-l">Avg Mileage</div><div class="stat-v">${s.avgMileage?Math.round(s.avgMileage).toLocaleString()+' mi':'N/A'}</div></div>
+      <div class="stat"><div class="stat-l">2022+ Year</div><div class="stat-v ${s.meets2022>0?'green':'amber'}">${s.meets2022} of ${s.active}</div></div>
+      <div class="stat"><div class="stat-l">New Today</div><div class="stat-v ${s.newToday>0?'green':''}">${s.newToday}</div></div>
+      <div class="stat"><div class="stat-l">Total Ever Seen</div><div class="stat-v">${s.totalSeen}</div></div>
+      <div class="stat"><div class="stat-l">Total Scrapes</div><div class="stat-v">${s.totalScrapes}</div></div>
+    `;
+  } catch(e) { console.error(e); }
+}
+
+async function loadListings() {
+  try {
+    const ls = await (await fetch('/api/listings')).json();
+    const g = document.getElementById('grid');
+    if (!ls.length) {
+      g.innerHTML = '<div class="empty"><h3>No active listings</h3><p>Run the scraper to fetch listings.</p><br><button class="btn btn-red" onclick="doScrape()">Run Scraper</button></div>';
+    } else {
+      g.innerHTML = ls.map(l=>renderCard(l,false)).join('');
     }
+  } catch(e) {
+    document.getElementById('grid').innerHTML = '<div class="empty"><h3>Failed to load</h3><p>Is the server running?</p></div>';
+  }
+}
 
-    async function loadListings() {
-      try {
-        const res = await fetch('/api/listings');
-        const listings = await res.json();
-        const grid = document.getElementById('listingsGrid');
+async function loadRemoved() {
+  try {
+    const ls = await (await fetch('/api/removed')).json();
+    const g = document.getElementById('rGrid');
+    if (!ls.length) { g.innerHTML = '<div class="empty"><h3>No removed listings yet</h3><p>Cars that disappear will show here.</p></div>'; }
+    else { g.innerHTML = ls.map(l=>renderCard(l,true)).join(''); }
+  } catch(e) { console.error(e); }
+}
 
-        if (listings.length === 0) {
-          grid.innerHTML = `
-            <div class="empty-state">
-              <h3>No active listings found</h3>
-              <p>Run the scraper to fetch the latest listings from Porsche Finder.</p>
-              <br>
-              <button class="btn btn-primary" onclick="triggerScrape()">Run Scraper</button>
-            </div>
-          `;
-        } else {
-          grid.innerHTML = listings.map(l => renderListingCard(l)).join('');
-        }
-      } catch (err) {
-        document.getElementById('listingsGrid').innerHTML = `
-          <div class="empty-state">
-            <h3>Failed to load listings</h3>
-            <p>Make sure the server is running and the database has been initialized.</p>
-          </div>
-        `;
-      }
-    }
+async function loadLog() {
+  try {
+    const log = await (await fetch('/api/scrape-log')).json();
+    const tb = document.querySelector('#logTbl tbody');
+    if (!log.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">No history</td></tr>'; }
+    else { tb.innerHTML = log.map(e=>`<tr><td>${fmtDate(e.scraped_at)}</td><td>${e.listings_found}</td><td style="color:${e.new_listings>0?'var(--green)':'inherit'}">${e.new_listings>0?'+':''}${e.new_listings}</td><td style="color:${e.price_changes>0?'var(--gold)':'inherit'}">${e.price_changes}</td><td style="color:${e.removed_listings>0?'var(--red)':'inherit'}">${e.removed_listings}</td></tr>`).join(''); }
+  } catch(e) { console.error(e); }
+}
 
-    async function loadRemoved() {
-      try {
-        const res = await fetch('/api/removed');
-        const listings = await res.json();
-        const grid = document.getElementById('removedGrid');
+async function doScrape() {
+  const b = document.getElementById('refreshBtn');
+  b.disabled = true; b.textContent = 'Scraping...';
+  try { await fetch('/api/scrape',{method:'POST'}); toast('Scrape started! Page will refresh in ~40s...'); }
+  catch(e) { toast('Failed to start scrape'); }
+  setTimeout(()=>{ b.disabled=false; b.textContent='Refresh Now'; loadAll(); }, 40000);
+}
 
-        if (listings.length === 0) {
-          grid.innerHTML = `
-            <div class="empty-state">
-              <h3>No removed listings yet</h3>
-              <p>Cars that disappear from Porsche Finder will show up here.</p>
-            </div>
-          `;
-        } else {
-          grid.innerHTML = listings.map(l => renderListingCard(l, true)).join('');
-        }
-      } catch (err) {
-        console.error('Failed to load removed:', err);
-      }
-    }
-
-    async function loadLog() {
-      try {
-        const res = await fetch('/api/scrape-log');
-        const log = await res.json();
-        const tbody = document.querySelector('#logTable tbody');
-
-        if (log.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--porsche-text-muted)">No scrape history yet</td></tr>';
-        } else {
-          tbody.innerHTML = log.map(entry => `
-            <tr>
-              <td>${formatDate(entry.scraped_at)}</td>
-              <td>${entry.listings_found}</td>
-              <td style="color:${entry.new_listings > 0 ? 'var(--porsche-green)' : 'inherit'}">${entry.new_listings > 0 ? '+' : ''}${entry.new_listings}</td>
-              <td style="color:${entry.price_changes > 0 ? 'var(--porsche-gold)' : 'inherit'}">${entry.price_changes}</td>
-              <td style="color:${entry.removed_listings > 0 ? 'var(--porsche-red)' : 'inherit'}">${entry.removed_listings}</td>
-            </tr>
-          `).join('');
-        }
-      } catch (err) {
-        console.error('Failed to load log:', err);
-      }
-    }
-
-    async function triggerScrape() {
-      const btn = document.getElementById('refreshBtn');
-      btn.disabled = true;
-      btn.textContent = 'Scraping...';
-
-      try {
-        await fetch('/api/scrape', { method: 'POST' });
-        showToast('Scrape started! Refresh the page in ~30s to see results.');
-      } catch (err) {
-        showToast('Failed to start scrape');
-      }
-
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.textContent = 'Refresh Now';
-        loadAll();
-      }, 35000);
-    }
-
-    function loadAll() {
-      loadStats();
-      loadListings();
-      loadRemoved();
-      loadLog();
-    }
-
-    // Initial load
-    loadAll();
-
-    // Auto-refresh data every 5 minutes
-    setInterval(loadAll, 5 * 60 * 1000);
-  </script>
+function loadAll() { loadStats(); loadListings(); loadRemoved(); loadLog(); }
+loadAll();
+setInterval(loadAll, 5*60*1000);
+</script>
 </body>
 </html>

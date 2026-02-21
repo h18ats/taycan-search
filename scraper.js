@@ -25,18 +25,37 @@ export function initDb() {
       price_text TEXT,
       exterior_color TEXT,
       interior_color TEXT,
+      interior_color_full TEXT,
       fuel_type TEXT,
       mileage TEXT,
       mileage_miles INTEGER,
       registration_date TEXT,
-      previous_owners TEXT,
+      registration_year INTEGER,
+      previous_owners INTEGER,
       power TEXT,
       drivetrain TEXT,
       range_wltp TEXT,
       image_url TEXT,
       detail_url TEXT,
       dealer TEXT,
+      dealer_address TEXT,
       consumption TEXT,
+      vin TEXT,
+      stock_number TEXT,
+      description TEXT,
+      service_history TEXT,
+      latest_maintenance TEXT,
+      warranty TEXT,
+      battery_warranty TEXT,
+      equipment_highlights TEXT,
+      equipment_exterior TEXT,
+      equipment_wheels TEXT,
+      equipment_interior TEXT,
+      equipment_audio TEXT,
+      equipment_emobility TEXT,
+      equipment_lighting TEXT,
+      equipment_assistance TEXT,
+      equipment_transmission TEXT,
       first_seen TEXT DEFAULT (datetime('now')),
       last_seen TEXT DEFAULT (datetime('now')),
       removed INTEGER DEFAULT 0
@@ -62,7 +81,116 @@ export function initDb() {
     );
   `);
 
+  // Add columns if they don't exist (for DB migration)
+  const cols = db.prepare("PRAGMA table_info(listings)").all().map(c => c.name);
+  const newCols = [
+    ['interior_color_full', 'TEXT'], ['registration_year', 'INTEGER'], ['dealer_address', 'TEXT'],
+    ['vin', 'TEXT'], ['stock_number', 'TEXT'], ['description', 'TEXT'],
+    ['service_history', 'TEXT'], ['latest_maintenance', 'TEXT'], ['warranty', 'TEXT'],
+    ['battery_warranty', 'TEXT'], ['equipment_highlights', 'TEXT'], ['equipment_exterior', 'TEXT'],
+    ['equipment_wheels', 'TEXT'], ['equipment_interior', 'TEXT'], ['equipment_audio', 'TEXT'],
+    ['equipment_emobility', 'TEXT'], ['equipment_lighting', 'TEXT'], ['equipment_assistance', 'TEXT'],
+    ['equipment_transmission', 'TEXT']
+  ];
+  for (const [col, type] of newCols) {
+    if (!cols.includes(col)) {
+      db.exec(`ALTER TABLE listings ADD COLUMN ${col} ${type}`);
+    }
+  }
+
   return db;
+}
+
+// Parse a detail page's text content into structured equipment data
+function parseDetailPage(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const data = {};
+
+  // VIN & Stock Number
+  const vinIdx = lines.findIndex(l => l === 'VIN:');
+  if (vinIdx >= 0 && lines[vinIdx + 1]) data.vin = lines[vinIdx + 1];
+  const stockIdx = lines.findIndex(l => l === 'Stock Number:');
+  if (stockIdx >= 0 && lines[stockIdx + 1]) data.stockNumber = lines[stockIdx + 1];
+
+  // Full interior color description
+  const intColorIdx = lines.findIndex(l => l === 'Interior colour');
+  if (intColorIdx >= 0 && lines[intColorIdx + 1]) data.interiorColorFull = lines[intColorIdx + 1];
+
+  // Dealer address
+  const dealerIdx = lines.findIndex(l => l.startsWith('Porsche Centre'));
+  if (dealerIdx >= 0) {
+    const addrParts = [];
+    for (let i = dealerIdx + 1; i < Math.min(dealerIdx + 4, lines.length); i++) {
+      if (lines[i] === 'Go to website' || lines[i].startsWith('Stock')) break;
+      addrParts.push(lines[i]);
+    }
+    data.dealerAddress = addrParts.join(', ');
+  }
+
+  // Description
+  const descIdx = lines.findIndex(l => l === 'Description');
+  if (descIdx >= 0) {
+    const descParts = [];
+    for (let i = descIdx + 1; i < lines.length; i++) {
+      if (lines[i] === 'E-Performance' || lines[i] === 'Vehicle Equipment') break;
+      descParts.push(lines[i]);
+    }
+    data.description = descParts.join('\n').trim();
+  }
+
+  // Service history
+  const fshIdx = lines.findIndex(l => l === 'Full Service History');
+  if (fshIdx >= 0 && lines[fshIdx + 1]) data.serviceHistory = lines[fshIdx + 1];
+
+  // Latest maintenance
+  const maintIdx = lines.findIndex(l => l === 'Latest Maintenance');
+  if (maintIdx >= 0 && lines[maintIdx + 1]) data.latestMaintenance = lines[maintIdx + 1];
+
+  // Warranty
+  data.warranty = '24 months Porsche Approved';
+  data.batteryWarranty = '8 years or up to 100,000 mi';
+
+  // Equipment sections
+  const equipStart = lines.findIndex(l => l === 'Equipment Highlights');
+  if (equipStart >= 0) {
+    // Equipment Highlights - items between "Equipment Highlights" and "Included Options"
+    const inclOptIdx = lines.findIndex((l, i) => i > equipStart && l === 'Included Options');
+    if (inclOptIdx >= 0) {
+      data.equipmentHighlights = lines.slice(equipStart + 1, inclOptIdx);
+    }
+
+    // Parse Included Options by category
+    const categories = {
+      'Exterior': 'equipmentExterior',
+      'Transmission / Chassis': 'equipmentTransmission',
+      'Wheels': 'equipmentWheels',
+      'Interior': 'equipmentInterior',
+      'Audio / Comm.': 'equipmentAudio',
+      'E-Mobility': 'equipmentEmobility',
+      'Lighting and vision': 'equipmentLighting',
+      'Comfort and assistance systems': 'equipmentAssistance'
+    };
+
+    const stopWords = ['Standard Equipment', 'Warranty', 'Condition and History', 'Technical Data'];
+
+    for (const [catName, catKey] of Object.entries(categories)) {
+      const catIdx = lines.findIndex((l, i) => i > (inclOptIdx || equipStart) && l === catName);
+      if (catIdx >= 0) {
+        const items = [];
+        for (let i = catIdx + 1; i < lines.length; i++) {
+          const line = lines[i];
+          // Stop if we hit another category or a stop section
+          if (Object.keys(categories).includes(line) || stopWords.includes(line)) break;
+          if (line.length > 3 && !line.startsWith('More about')) {
+            items.push(line);
+          }
+        }
+        data[catKey] = items;
+      }
+    }
+  }
+
+  return data;
 }
 
 export async function scrape({ headed = false } = {}) {
@@ -112,11 +240,9 @@ export async function scrape({ headed = false } = {}) {
     if (title.includes('Security') || title.includes('Vercel')) {
       if (headed) {
         console.log('⚠️  Security checkpoint detected. Solve it in the browser window...');
-        // Wait for user to solve challenge
         await page.waitForFunction(() => !document.title.includes('Security') && !document.title.includes('Vercel'), { timeout: 120000 });
         console.log('✅ Security challenge passed!');
         await page.waitForTimeout(3000);
-        // Save updated session
         await context.storageState({ path: storageStatePath });
         console.log('💾 Session saved for future use');
       } else {
@@ -139,118 +265,66 @@ export async function scrape({ headed = false } = {}) {
       }
     } catch (e) {}
 
-    console.log('⏳ Extracting listings...');
+    console.log('⏳ Extracting listings from search page...');
     await page.waitForTimeout(2000);
 
-    // Extract all listing data from the page using structured DOM parsing
+    // Extract basic listing data from search page
     const listings = await page.evaluate(() => {
       const results = [];
-
-      // Find all detail page links (each listing links to /details/)
       const detailLinks = document.querySelectorAll('a[href*="/details/"]');
       const processedSlugs = new Set();
 
       for (const link of detailLinks) {
         const href = link.getAttribute('href');
         if (!href) continue;
-
-        // Extract the clean listing slug (e.g. "porsche-taycan-turbo-s-preowned-5K9PGV")
         const detailPath = href.split('/details/')[1];
         if (!detailPath) continue;
         const slug = detailPath.split('?')[0];
         if (processedSlugs.has(slug)) continue;
         processedSlugs.add(slug);
 
-        // Walk up to find the card container
         let card = link;
         for (let i = 0; i < 15; i++) {
           if (!card.parentElement) break;
           card = card.parentElement;
-          if (card.textContent.includes('£') && card.textContent.length > 200 && card.textContent.length < 8000) {
-            break;
-          }
+          if (card.textContent.includes('£') && card.textContent.length > 200 && card.textContent.length < 8000) break;
         }
 
         const text = card.innerText || card.textContent;
         if (!text.includes('£')) continue;
 
-        // Split text into lines for more precise extraction
         const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-
-        // Price: find £XX,XXX pattern
         const priceMatch = text.match(/£([\d,]+)/);
 
-        // Mileage: match "XX,XXX mi" but NOT after "Range" or "WLTP"
-        // The actual mileage appears as a standalone value like "40,419 mi"
-        // while range appears as "Range combined (WLTP): 259 mi"
-        let mileage = null;
-        let mileageMiles = null;
+        let mileage = null, mileageMiles = null;
         for (const line of lines) {
           const m = line.match(/^([\d,]+)\s*mi$/);
-          if (m) {
-            mileage = line;
-            mileageMiles = parseInt(m[1].replace(/,/g, ''));
-            break;
-          }
+          if (m) { mileage = line; mileageMiles = parseInt(m[1].replace(/,/g, '')); break; }
         }
 
-        // Registration date: MM/YYYY
         const dateMatch = text.match(/(\d{2}\/\d{4})/);
-
-        // Previous owners: "X previous owner(s)" - must be on its own or preceded by whitespace/newline
         let previousOwners = null;
         for (const line of lines) {
           const m = line.match(/^(\d+)\s*previous\s*owner/i);
-          if (m) {
-            previousOwners = line;
-            break;
-          }
+          if (m) { previousOwners = parseInt(m[1]); break; }
         }
 
-        // Power
         const powerMatch = text.match(/(\d+\s*kW\s*\/\s*\d+\s*hp)/);
-
-        // Range (WLTP) - explicitly after "Range"
         const rangeMatch = text.match(/Range[^:]*:\s*([\d,]+\s*mi)/i);
-
-        // Consumption
         const consumptionMatch = text.match(/consumption[^:]*:\s*([\d.]+\s*kWh\/100\s*km)/i);
 
-        // Images: look for actual car photos (not icons/logos)
         let imageUrl = null;
-        const allImgs = card.querySelectorAll('img');
-        for (const img of allImgs) {
+        for (const img of card.querySelectorAll('img')) {
           const src = img.src || img.dataset.src || img.getAttribute('srcset')?.split(' ')[0] || '';
-          if (src && src.length > 50 && !src.includes('logo') && !src.includes('icon') && !src.includes('svg')) {
-            imageUrl = src;
-            break;
-          }
+          if (src && src.length > 50 && !src.includes('logo') && !src.includes('icon') && !src.includes('svg')) { imageUrl = src; break; }
         }
-        // Also check for background images on child elements
         if (!imageUrl) {
-          const bgEls = card.querySelectorAll('[style*="background"]');
-          for (const el of bgEls) {
-            const bg = el.style.backgroundImage;
-            const urlMatch = bg.match(/url\(["']?([^"')]+)["']?\)/);
-            if (urlMatch && urlMatch[1].length > 50) {
-              imageUrl = urlMatch[1];
-              break;
-            }
-          }
-        }
-        // Check picture/source elements
-        if (!imageUrl) {
-          const sources = card.querySelectorAll('source[srcset], picture source');
-          for (const source of sources) {
+          for (const source of card.querySelectorAll('source[srcset]')) {
             const srcset = source.getAttribute('srcset');
-            if (srcset && srcset.length > 50) {
-              imageUrl = srcset.split(' ')[0].split(',')[0].trim();
-              break;
-            }
+            if (srcset && srcset.length > 50) { imageUrl = srcset.split(' ')[0].split(',')[0].trim(); break; }
           }
         }
 
-        // Colors: look for color-related lines
         const colorPatterns = [
           'Jet Black Metallic', 'Volcano Grey Metallic', 'Carrara White Metallic',
           'Gentian Blue Metallic', 'Cherry Metallic', 'Frozen Blue Metallic',
@@ -261,38 +335,25 @@ export async function scrape({ headed = false } = {}) {
         const interiorColorPatterns = ['Black', 'Beige', 'Red', 'Bordeaux Red', 'Chalk',
           'Truffle Brown', 'Atacama Beige', 'Slate Grey', 'Graphite Blue', 'Basalt Black'];
 
-        let exteriorColor = null;
-        let interiorColor = null;
-        for (const c of colorPatterns) {
-          if (text.includes(c)) { exteriorColor = c; break; }
-        }
-        // Interior color: find the first matching color that appears after the exterior color
+        let exteriorColor = null, interiorColor = null;
+        for (const c of colorPatterns) { if (text.includes(c)) { exteriorColor = c; break; } }
         if (exteriorColor) {
-          const afterExterior = text.substring(text.indexOf(exteriorColor) + exteriorColor.length);
           for (const c of interiorColorPatterns) {
-            // Check if this color appears as a standalone word/line
             for (const line of lines) {
-              if (line === c || line.startsWith(c)) {
-                const idx = text.indexOf(line);
-                if (idx > text.indexOf(exteriorColor)) {
-                  interiorColor = c;
-                  break;
-                }
+              if ((line === c || line.startsWith(c)) && text.indexOf(line) > text.indexOf(exteriorColor)) {
+                interiorColor = c; break;
               }
             }
             if (interiorColor) break;
           }
         }
 
-        // Condition
         const condition = text.includes('Pre-Owned') ? 'Porsche Approved Pre-Owned' :
                          text.includes('New car') ? 'New' : 'Used';
-
-        // Dealer
         const dealerMatch = text.match(/Porsche Centre\s+([\w\s]+?)(?:\n|Electrical|$)/i);
 
-        // Clean detail URL (remove query params for the ID)
-        const cleanDetailUrl = `https://finder.porsche.com/gb/en-GB/details/${slug}`;
+        // Parse registration year
+        const regYear = dateMatch ? parseInt(dateMatch[1].split('/')[1]) : null;
 
         results.push({
           id: slug,
@@ -300,30 +361,64 @@ export async function scrape({ headed = false } = {}) {
           condition,
           price: priceMatch ? parseInt(priceMatch[1].replace(/,/g, '')) : null,
           priceText: priceMatch ? `£${priceMatch[1]}` : null,
-          exteriorColor,
-          interiorColor,
-          fuelType: 'Electric',
-          mileage,
-          mileageMiles,
+          exteriorColor, interiorColor, fuelType: 'Electric',
+          mileage, mileageMiles,
           registrationDate: dateMatch ? dateMatch[1] : null,
+          registrationYear: regYear,
           previousOwners,
           power: powerMatch ? powerMatch[1] : null,
           drivetrain: text.includes('All-wheel') ? 'All-wheel-drive' : null,
           rangeWltp: rangeMatch ? rangeMatch[1] : null,
           imageUrl,
-          detailUrl: cleanDetailUrl,
+          detailUrl: `https://finder.porsche.com/gb/en-GB/details/${slug}`,
           dealer: dealerMatch ? `Porsche Centre ${dealerMatch[1].trim()}` : null,
           consumption: consumptionMatch ? consumptionMatch[1] : null
         });
       }
-
       return results;
     });
 
-    console.log(`🚗 Found ${listings.length} listings`);
+    console.log(`🚗 Found ${listings.length} listings on search page`);
     listings.forEach((l, i) => {
       console.log(`  ${i + 1}. ${l.exteriorColor || 'Unknown'} - ${l.priceText} - ${l.mileage} - ${l.dealer}`);
     });
+
+    // Now visit each detail page to get full equipment data
+    console.log('\n📋 Fetching detail pages for equipment data...');
+    for (const listing of listings) {
+      try {
+        console.log(`  → Loading ${listing.id}...`);
+        await page.goto(listing.detailUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForTimeout(3000);
+
+        const pageText = await page.evaluate(() => document.body.innerText);
+        const detailData = parseDetailPage(pageText);
+
+        // Merge detail data into listing
+        listing.vin = detailData.vin || null;
+        listing.stockNumber = detailData.stockNumber || null;
+        listing.interiorColorFull = detailData.interiorColorFull || null;
+        listing.dealerAddress = detailData.dealerAddress || null;
+        listing.description = detailData.description || null;
+        listing.serviceHistory = detailData.serviceHistory || null;
+        listing.latestMaintenance = detailData.latestMaintenance || null;
+        listing.warranty = detailData.warranty || null;
+        listing.batteryWarranty = detailData.batteryWarranty || null;
+        listing.equipmentHighlights = detailData.equipmentHighlights || [];
+        listing.equipmentExterior = detailData.equipmentExterior || [];
+        listing.equipmentWheels = detailData.equipmentWheels || [];
+        listing.equipmentInterior = detailData.equipmentInterior || [];
+        listing.equipmentAudio = detailData.equipmentAudio || [];
+        listing.equipmentEmobility = detailData.equipmentEmobility || [];
+        listing.equipmentLighting = detailData.equipmentLighting || [];
+        listing.equipmentAssistance = detailData.equipmentAssistance || [];
+        listing.equipmentTransmission = detailData.equipmentTransmission || [];
+
+        console.log(`    ✅ ${detailData.equipmentHighlights?.length || 0} highlights, ${Object.values(detailData).filter(v => Array.isArray(v)).reduce((a, v) => a + v.length, 0)} total options`);
+      } catch (err) {
+        console.log(`    ⚠️  Failed to load detail: ${err.message}`);
+      }
+    }
 
     // Save to database
     const db = initDb();
@@ -332,34 +427,57 @@ export async function scrape({ headed = false } = {}) {
 
     const insertListing = db.prepare(`
       INSERT INTO listings (id, title, condition, price, price_text, exterior_color, interior_color,
-        fuel_type, mileage, mileage_miles, registration_date, previous_owners, power, drivetrain,
-        range_wltp, image_url, detail_url, dealer, consumption)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        interior_color_full, fuel_type, mileage, mileage_miles, registration_date, registration_year,
+        previous_owners, power, drivetrain, range_wltp, image_url, detail_url, dealer, dealer_address,
+        consumption, vin, stock_number, description, service_history, latest_maintenance, warranty,
+        battery_warranty, equipment_highlights, equipment_exterior, equipment_wheels, equipment_interior,
+        equipment_audio, equipment_emobility, equipment_lighting, equipment_assistance, equipment_transmission)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         price = excluded.price,
         price_text = excluded.price_text,
         mileage = excluded.mileage,
         mileage_miles = excluded.mileage_miles,
+        previous_owners = excluded.previous_owners,
         last_seen = datetime('now'),
-        removed = 0
+        removed = 0,
+        vin = COALESCE(excluded.vin, listings.vin),
+        stock_number = COALESCE(excluded.stock_number, listings.stock_number),
+        description = COALESCE(excluded.description, listings.description),
+        service_history = COALESCE(excluded.service_history, listings.service_history),
+        latest_maintenance = COALESCE(excluded.latest_maintenance, listings.latest_maintenance),
+        equipment_highlights = COALESCE(excluded.equipment_highlights, listings.equipment_highlights),
+        equipment_exterior = COALESCE(excluded.equipment_exterior, listings.equipment_exterior),
+        equipment_wheels = COALESCE(excluded.equipment_wheels, listings.equipment_wheels),
+        equipment_interior = COALESCE(excluded.equipment_interior, listings.equipment_interior),
+        equipment_audio = COALESCE(excluded.equipment_audio, listings.equipment_audio),
+        equipment_emobility = COALESCE(excluded.equipment_emobility, listings.equipment_emobility),
+        equipment_lighting = COALESCE(excluded.equipment_lighting, listings.equipment_lighting),
+        equipment_assistance = COALESCE(excluded.equipment_assistance, listings.equipment_assistance),
+        equipment_transmission = COALESCE(excluded.equipment_transmission, listings.equipment_transmission)
     `);
 
     const getExisting = db.prepare('SELECT id, price FROM listings WHERE id = ?');
     const insertPrice = db.prepare('INSERT INTO price_history (listing_id, price, price_text) VALUES (?, ?, ?)');
 
+    const toJson = (arr) => arr && arr.length > 0 ? JSON.stringify(arr) : null;
+
     const transaction = db.transaction((items) => {
       for (const l of items) {
         const existing = getExisting.get(l.id);
-        if (!existing) {
-          newCount++;
-        } else if (existing.price !== l.price) {
-          priceChangeCount++;
-        }
+        if (!existing) newCount++;
+        else if (existing.price !== l.price) priceChangeCount++;
 
-        insertListing.run(l.id, l.title, l.condition, l.price, l.priceText,
-          l.exteriorColor, l.interiorColor, l.fuelType, l.mileage, l.mileageMiles,
-          l.registrationDate, l.previousOwners, l.power, l.drivetrain, l.rangeWltp,
-          l.imageUrl, l.detailUrl, l.dealer, l.consumption);
+        insertListing.run(
+          l.id, l.title, l.condition, l.price, l.priceText, l.exteriorColor, l.interiorColor,
+          l.interiorColorFull, l.fuelType, l.mileage, l.mileageMiles, l.registrationDate, l.registrationYear,
+          l.previousOwners, l.power, l.drivetrain, l.rangeWltp, l.imageUrl, l.detailUrl, l.dealer,
+          l.dealerAddress, l.consumption, l.vin, l.stockNumber, l.description, l.serviceHistory,
+          l.latestMaintenance, l.warranty, l.batteryWarranty,
+          toJson(l.equipmentHighlights), toJson(l.equipmentExterior), toJson(l.equipmentWheels),
+          toJson(l.equipmentInterior), toJson(l.equipmentAudio), toJson(l.equipmentEmobility),
+          toJson(l.equipmentLighting), toJson(l.equipmentAssistance), toJson(l.equipmentTransmission)
+        );
 
         insertPrice.run(l.id, l.price, l.priceText);
       }
@@ -367,21 +485,18 @@ export async function scrape({ headed = false } = {}) {
 
     transaction(listings);
 
-    // Mark removed listings (were active but not in current scrape)
+    // Mark removed listings
     const currentIds = listings.map(l => `'${l.id}'`).join(',');
     const removedCount = currentIds
       ? db.prepare(`UPDATE listings SET removed = 1 WHERE removed = 0 AND id NOT IN (${currentIds})`).run().changes
       : 0;
 
-    // Log scrape
     db.prepare('INSERT INTO scrape_log (listings_found, new_listings, price_changes, removed_listings) VALUES (?, ?, ?, ?)')
       .run(listings.length, newCount, priceChangeCount, removedCount);
 
     console.log(`\n📊 Summary: ${newCount} new, ${priceChangeCount} price changes, ${removedCount} removed`);
 
-    // Save session for next time
     await context.storageState({ path: join(__dirname, 'storage-state.json') });
-
     db.close();
     await browser.close();
 
@@ -403,9 +518,7 @@ const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.arg
 if (isMain) {
   const headed = process.argv.includes('--headed');
   scrape({ headed }).then(result => {
-    if (result.error) {
-      process.exit(1);
-    }
+    if (result.error) process.exit(1);
   }).catch(err => {
     console.error('Failed:', err.message);
     process.exit(1);
