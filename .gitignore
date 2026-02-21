@@ -11,6 +11,7 @@ dashboard-screenshot.png
 dashboard-v2.png
 api-response-*.json
 detail-page-text*.txt
+last-email.html
 scrape.log
 scrape-error.log
 .DS_Store

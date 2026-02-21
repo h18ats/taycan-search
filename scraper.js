@@ -535,43 +535,31 @@ export async function scrape({ headed = false } = {}) {
     if (newCount > 0) {
       try {
         const { execSync } = await import('child_process');
-        const newListings = listings.filter(l => {
-          const db2 = new Database(join(__dirname, 'porsche.db'));
-          const row = db2.prepare('SELECT first_seen FROM listings WHERE id = ?').get(l.id);
-          db2.close();
-          return row && row.first_seen && (Date.now() - new Date(row.first_seen + 'Z').getTime()) < 60 * 60 * 1000;
-        });
+        const { writeFileSync } = await import('fs');
+        const { buildEmailHtml } = await import('./email-template.js');
 
-        const carSummaries = (newListings.length > 0 ? newListings : listings.slice(0, newCount)).map(l => {
-          const premium = [
-            ...(l.equipmentTransmission || []),
-            ...(l.equipmentAssistance || [])
-          ].filter(e => e.match(/PCCB|InnoDrive|Head-Up|Carbon SportDesign/i));
+        // Get the newly added listings from the DB (added in last hour)
+        const db2 = new Database(join(__dirname, 'porsche.db'));
+        const newRows = db2.prepare(`
+          SELECT * FROM listings
+          WHERE removed = 0 AND datetime(first_seen) > datetime('now', '-1 hour')
+          ORDER BY price ASC
+        `).all();
+        db2.close();
 
-          return [
-            `${l.exteriorColor || 'Unknown'} / ${l.interiorColor || 'Unknown'} interior`,
-            `Price: ${l.priceText}`,
-            `Mileage: ${l.mileage || 'N/A'}`,
-            `Registered: ${l.registrationDate || 'N/A'}${l.registrationYear >= 2022 ? ' ✅ MEETS 2022+ TARGET' : ''}`,
-            `Owners: ${l.previousOwners != null ? l.previousOwners : 'N/A'}`,
-            `Dealer: ${l.dealer || 'Unknown'}`,
-            premium.length > 0 ? `Premium options: ${premium.join(', ')}` : null,
-            `View: ${l.detailUrl}`,
-          ].filter(Boolean).join('\n');
-        }).join('\n\n---\n\n');
+        // Use DB rows if available, otherwise use scraped listings
+        const carsForEmail = newRows.length > 0 ? newRows : listings.slice(0, newCount);
 
-        const subject = `🚗 ${newCount} new Taycan Turbo S listing${newCount > 1 ? 's' : ''} found!`;
-        const body = [
-          `${newCount} new Porsche Taycan Turbo S listing${newCount > 1 ? 's' : ''} matching your spec just appeared on Porsche Finder.\n`,
-          carSummaries,
-          `\n---\nDashboard: https://porsche-finder-rho.vercel.app`,
-          `Porsche Finder: https://finder.porsche.com/gb/en-GB/search/taycan?model=taycan&maximum-price=60000&category=taycan-turbo-s`,
-        ].join('\n');
+        const subject = `New Taycan Turbo S listing${newCount > 1 ? 's' : ''} found - ${carsForEmail.map(c => c.exterior_color || c.exteriorColor).join(', ')}`;
+        const html = buildEmailHtml(carsForEmail);
 
-        execSync(`python3 /Users/andy/gmail-tool/gmail.py send --to "andy.batty@hotmail.com" --subject "${subject.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`, {
+        const htmlPath = join(__dirname, 'last-email.html');
+        writeFileSync(htmlPath, html);
+
+        execSync(`python3 /Users/andy/gmail-tool/gmail.py send --to "andy.batty@hotmail.com" --subject "${subject.replace(/"/g, '\\"')}" --body-file "${htmlPath}" --html`, {
           stdio: 'pipe', timeout: 15000
         });
-        console.log('📧 Email notification sent to andy.batty@hotmail.com');
+        console.log('📧 HTML email sent to andy.batty@hotmail.com');
       } catch (emailErr) {
         console.log(`⚠️  Email failed: ${emailErr.message?.substring(0, 100)}`);
       }
