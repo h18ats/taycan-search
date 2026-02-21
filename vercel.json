@@ -1,0 +1,14 @@
+{
+  "buildCommand": "",
+  "installCommand": "",
+  "framework": null,
+  "outputDirectory": "static",
+  "headers": [
+    {
+      "source": "/data.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=300" }
+      ]
+    }
+  ]
+}

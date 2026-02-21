@@ -14,3 +14,4 @@ detail-page-text*.txt
 scrape.log
 scrape-error.log
 .DS_Store
+.vercel

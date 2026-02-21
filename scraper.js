@@ -500,6 +500,37 @@ export async function scrape({ headed = false } = {}) {
     db.close();
     await browser.close();
 
+    // Export static JSON and deploy to Vercel
+    try {
+      const { exportData } = await import('./export-data.js');
+      exportData();
+
+      const { execSync } = await import('child_process');
+
+      // Push data to GitHub
+      try {
+        execSync('git add static/data.json && git commit -m "Update listing data [auto]" && git push', {
+          cwd: __dirname, stdio: 'pipe', timeout: 30000
+        });
+        console.log('📤 Pushed to GitHub');
+      } catch (gitErr) {
+        console.log(`⚠️  Git push skipped: ${gitErr.message?.substring(0, 80)}`);
+      }
+
+      // Deploy to Vercel
+      try {
+        execSync('vercel --prod --yes 2>&1', {
+          cwd: __dirname, stdio: 'pipe', timeout: 60000,
+          env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' }
+        });
+        console.log('🚀 Deployed to Vercel');
+      } catch (vErr) {
+        console.log(`⚠️  Vercel deploy skipped: ${vErr.message?.substring(0, 80)}`);
+      }
+    } catch (exportErr) {
+      console.log(`⚠️  Export skipped: ${exportErr.message}`);
+    }
+
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`✅ Scrape complete in ${elapsed}s`);
 

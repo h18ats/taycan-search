@@ -410,66 +410,83 @@ function toast(msg) {
   setTimeout(()=>t.classList.remove('show'), 3000);
 }
 
-async function loadStats() {
-  try {
-    const s = await (await fetch('/api/stats')).json();
-    document.getElementById('nActive').textContent = s.active;
-    document.getElementById('nRemoved').textContent = s.removed;
-    document.getElementById('lastUp').textContent = s.lastScrape ? 'Updated: '+fmtDate(s.lastScrape) : 'No data yet';
-    document.getElementById('statsBar').innerHTML = `
-      <div class="stat"><div class="stat-l">Active Listings</div><div class="stat-v green">${s.active}</div></div>
-      <div class="stat"><div class="stat-l">Lowest Price</div><div class="stat-v gold">${fmtPrice(s.minPrice)}</div></div>
-      <div class="stat"><div class="stat-l">Average Price</div><div class="stat-v gold">${s.avgPrice?fmtPrice(Math.round(s.avgPrice)):'N/A'}</div></div>
-      <div class="stat"><div class="stat-l">Avg Mileage</div><div class="stat-v">${s.avgMileage?Math.round(s.avgMileage).toLocaleString()+' mi':'N/A'}</div></div>
-      <div class="stat"><div class="stat-l">2022+ Year</div><div class="stat-v ${s.meets2022>0?'green':'amber'}">${s.meets2022} of ${s.active}</div></div>
-      <div class="stat"><div class="stat-l">New Today</div><div class="stat-v ${s.newToday>0?'green':''}">${s.newToday}</div></div>
-      <div class="stat"><div class="stat-l">Total Ever Seen</div><div class="stat-v">${s.totalSeen}</div></div>
-      <div class="stat"><div class="stat-l">Total Scrapes</div><div class="stat-v">${s.totalScrapes}</div></div>
-    `;
-  } catch(e) { console.error(e); }
-}
+// Data loading: tries static data.json first (Vercel), falls back to local API (dev server)
+let DATA = null;
 
-async function loadListings() {
+async function fetchData() {
+  // Try static JSON first (works on Vercel and locally if exported)
   try {
-    const ls = await (await fetch('/api/listings')).json();
-    const g = document.getElementById('grid');
-    if (!ls.length) {
-      g.innerHTML = '<div class="empty"><h3>No active listings</h3><p>Run the scraper to fetch listings.</p><br><button class="btn btn-red" onclick="doScrape()">Run Scraper</button></div>';
-    } else {
-      g.innerHTML = ls.map(l=>renderCard(l,false)).join('');
-    }
+    const res = await fetch('/data.json');
+    if (res.ok) { DATA = await res.json(); return; }
+  } catch(e) {}
+  // Fallback: local Express API
+  try {
+    const [listings, removed, stats, log] = await Promise.all([
+      fetch('/api/listings').then(r=>r.json()),
+      fetch('/api/removed').then(r=>r.json()),
+      fetch('/api/stats').then(r=>r.json()),
+      fetch('/api/scrape-log').then(r=>r.json()),
+    ]);
+    DATA = { listings, removed, stats, log };
   } catch(e) {
-    document.getElementById('grid').innerHTML = '<div class="empty"><h3>Failed to load</h3><p>Is the server running?</p></div>';
+    console.error('Failed to load data:', e);
   }
 }
 
-async function loadRemoved() {
-  try {
-    const ls = await (await fetch('/api/removed')).json();
-    const g = document.getElementById('rGrid');
-    if (!ls.length) { g.innerHTML = '<div class="empty"><h3>No removed listings yet</h3><p>Cars that disappear will show here.</p></div>'; }
-    else { g.innerHTML = ls.map(l=>renderCard(l,true)).join(''); }
-  } catch(e) { console.error(e); }
+function renderStats() {
+  if (!DATA) return;
+  const s = DATA.stats;
+  document.getElementById('nActive').textContent = s.active;
+  document.getElementById('nRemoved').textContent = s.removed;
+  document.getElementById('lastUp').textContent = s.lastScrape ? 'Updated: '+fmtDate(s.lastScrape) : 'No data yet';
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><div class="stat-l">Active Listings</div><div class="stat-v green">${s.active}</div></div>
+    <div class="stat"><div class="stat-l">Lowest Price</div><div class="stat-v gold">${fmtPrice(s.minPrice)}</div></div>
+    <div class="stat"><div class="stat-l">Average Price</div><div class="stat-v gold">${s.avgPrice?fmtPrice(Math.round(s.avgPrice)):'N/A'}</div></div>
+    <div class="stat"><div class="stat-l">Avg Mileage</div><div class="stat-v">${s.avgMileage?Math.round(s.avgMileage).toLocaleString()+' mi':'N/A'}</div></div>
+    <div class="stat"><div class="stat-l">2022+ Year</div><div class="stat-v ${s.meets2022>0?'green':'amber'}">${s.meets2022} of ${s.active}</div></div>
+    <div class="stat"><div class="stat-l">New Today</div><div class="stat-v ${s.newToday>0?'green':''}">${s.newToday}</div></div>
+    <div class="stat"><div class="stat-l">Total Ever Seen</div><div class="stat-v">${s.totalSeen}</div></div>
+    <div class="stat"><div class="stat-l">Total Scrapes</div><div class="stat-v">${s.totalScrapes}</div></div>
+  `;
 }
 
-async function loadLog() {
-  try {
-    const log = await (await fetch('/api/scrape-log')).json();
-    const tb = document.querySelector('#logTbl tbody');
-    if (!log.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">No history</td></tr>'; }
-    else { tb.innerHTML = log.map(e=>`<tr><td>${fmtDate(e.scraped_at)}</td><td>${e.listings_found}</td><td style="color:${e.new_listings>0?'var(--green)':'inherit'}">${e.new_listings>0?'+':''}${e.new_listings}</td><td style="color:${e.price_changes>0?'var(--gold)':'inherit'}">${e.price_changes}</td><td style="color:${e.removed_listings>0?'var(--red)':'inherit'}">${e.removed_listings}</td></tr>`).join(''); }
-  } catch(e) { console.error(e); }
+function renderListings() {
+  if (!DATA) return;
+  const g = document.getElementById('grid');
+  if (!DATA.listings.length) {
+    g.innerHTML = '<div class="empty"><h3>No active listings</h3><p>Waiting for next scrape to find listings.</p></div>';
+  } else {
+    g.innerHTML = DATA.listings.map(l=>renderCard(l,false)).join('');
+  }
+}
+
+function renderRemoved() {
+  if (!DATA) return;
+  const g = document.getElementById('rGrid');
+  if (!DATA.removed.length) { g.innerHTML = '<div class="empty"><h3>No removed listings yet</h3><p>Cars that disappear will show here.</p></div>'; }
+  else { g.innerHTML = DATA.removed.map(l=>renderCard(l,true)).join(''); }
+}
+
+function renderLog() {
+  if (!DATA) return;
+  const tb = document.querySelector('#logTbl tbody');
+  if (!DATA.log.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">No history</td></tr>'; }
+  else { tb.innerHTML = DATA.log.map(e=>`<tr><td>${fmtDate(e.scraped_at)}</td><td>${e.listings_found}</td><td style="color:${e.new_listings>0?'var(--green)':'inherit'}">${e.new_listings>0?'+':''}${e.new_listings}</td><td style="color:${e.price_changes>0?'var(--gold)':'inherit'}">${e.price_changes}</td><td style="color:${e.removed_listings>0?'var(--red)':'inherit'}">${e.removed_listings}</td></tr>`).join(''); }
 }
 
 async function doScrape() {
   const b = document.getElementById('refreshBtn');
   b.disabled = true; b.textContent = 'Scraping...';
   try { await fetch('/api/scrape',{method:'POST'}); toast('Scrape started! Page will refresh in ~40s...'); }
-  catch(e) { toast('Failed to start scrape'); }
+  catch(e) { toast('Scrape can only be triggered from the local server'); }
   setTimeout(()=>{ b.disabled=false; b.textContent='Refresh Now'; loadAll(); }, 40000);
 }
 
-function loadAll() { loadStats(); loadListings(); loadRemoved(); loadLog(); }
+async function loadAll() {
+  await fetchData();
+  if (DATA) { renderStats(); renderListings(); renderRemoved(); renderLog(); }
+}
 loadAll();
 setInterval(loadAll, 5*60*1000);
 </script>
